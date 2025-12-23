@@ -1,0 +1,94 @@
+{
+  "position": "top",
+  "height": 28,
+
+  "modules-left": ["hyprland/workspaces", "hyprland/submap", "custom/media"],
+  "modules-center": ["hyprland/window"],
+  "modules-right": ["pulseaudio", "network", "cpu", "memory", "battery", "clock", "tray"],
+
+  "hyprland/submap": {
+    "format": "󰌌 <span style=\"italic\">{}</span>"
+  },
+
+  "hyprland/window": {
+    "format": "{}",
+    "max-length": 60
+  },
+
+  "hyprland/workspaces": {
+    "disable-scroll": false,
+    "on-scroll-up": "hyprctl dispatch workspace e+1",
+    "on-scroll-down": "hyprctl dispatch workspace e-1",
+    "format": "{icon}",
+    "format-icons": {
+      "active": "",
+      "default": "",
+      "urgent": ""
+    },
+    "persistent-workspaces": {
+      "*": 5
+    }
+  },
+
+  "tray": {
+    "spacing": 10
+  },
+
+  "clock": {
+    "format": "  {:%H:%M}",
+    "format-alt": "  {:%Y-%m-%d}"
+  },
+
+  "cpu": {
+    "format": "  {usage}%",
+    "tooltip": false
+  },
+
+  "memory": {
+    "format": "  {}%"
+  },
+
+  "battery": {
+    "states": {
+      "good": 95,
+      "warning": 30,
+      "critical": 15
+    },
+    "format": "{icon} {capacity}%",
+    "format-charging": " {capacity}%",
+    "format-plugged": " {capacity}%",
+    "format-alt": "󰥔  {time}",
+    "format-icons": ["  ", "  ", "  ", "  ", "  "]
+  },
+
+  "network": {
+    "format-wifi": "   {essid} ({signalStrength}%)",
+    "format-ethernet": " {ifname}: {ipaddr}/{cidr}",
+    "format-linked": " {ifname} (No IP)",
+    "format-disconnected": "  Disconnected",
+    "format-alt": "  {ifname}: {ipaddr}/{cidr}"
+  },
+
+  "pulseaudio": {
+    "format": "{icon} {volume}% {format_source}",
+    "format-bluetooth": " {volume}% {format_source}",
+    "format-muted": "󰝟  muted {format_source}",
+    "format-source": " {volume}%",
+    "format-source-muted": "  muted",
+    "format-icons": {
+      "default": [" ", " ", "  "]
+    },
+    "on-click": "pavucontrol"
+  },
+
+ "custom/media": {
+  "format": "  {}",
+  "return-type": "json",
+  "max-length": 40,
+  "escape": true,
+  "exec": "$HOME/.config/waybar/mediaplayer.py 2> /dev/null",
+  "interval": 2
+}
+ 
+}
+
