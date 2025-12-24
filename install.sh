@@ -323,6 +323,8 @@ main() {
     waybar \
     wofi \
     kitty \
+    cmatrix \
+    cava \
     thunar \
     wl-clipboard \
     swww \

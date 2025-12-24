@@ -1,0 +1,13 @@
+[general]
+bars = 24
+framerate = 60
+
+[input]
+method = pulse
+
+[color]
+gradient = 1
+gradient_color_1 = '#ffffff'
+gradient_color_2 = '#aaaaaa'
+gradient_color_3 = '#666666'
+
