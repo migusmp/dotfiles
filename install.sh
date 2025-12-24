@@ -325,6 +325,7 @@ main() {
     kitty \
     thunar \
     wl-clipboard \
+    swww \
     grim slurp \
     brightnessctl \
     networkmanager network-manager-applet \
