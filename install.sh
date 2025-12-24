@@ -7,7 +7,9 @@ set -euo pipefail
 #   dotfiles/{hypr,hypridle,waybar,wofi,nvim}/...
 # =========================
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")"
+DOTFILES_DIR="$REPO_DIR/dotfiles"
 CONFIG_DIR="$HOME/.config"
 
 log() { printf "\n\033[1;32m==>\033[0m %s\n" "$*"; }
@@ -43,16 +45,16 @@ backup_path() {
 }
 
 install_config_dir() {
-  local name="$1"              # hypr, waybar, nvim, ...
-  local src="$REPO_DIR/$name"
-  local dest="$HOME/.config/$name"
+  local name="$1"
+  local src="$DOTFILES_DIR/$name"
+  local dest="$CONFIG_DIR/$name"
 
   if [[ ! -d "$src" ]]; then
-    warn "No $name/ directory in repo; skipping."
+    warn "No $name/ directory in $DOTFILES_DIR; skipping."
     return 0
   fi
 
-  mkdir -p "$HOME/.config"
+  mkdir -p "$CONFIG_DIR"
   backup_path "$dest"
 
   log "Installing config folder: $name -> ~/.config/$name"
@@ -229,6 +231,11 @@ main() {
 
   log "Updating system"
   sudo pacman -Syu --noconfirm
+
+  log "REPO_DIR = $REPO_DIR"
+  log "DOTFILES_DIR = $DOTFILES_DIR"
+  log "Listing dotfiles:"
+  ls -la "$DOTFILES_DIR" || true
 
   log "Installing base dev tools"
   pac_install \
