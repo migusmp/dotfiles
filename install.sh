@@ -360,6 +360,7 @@ mkdir -p "$CONFIG_DIR"
 
 install_config_dir hypr
 install_config_dir hypridle
+install_config_dir hyprlock
 install_config_dir waybar
 install_config_dir wofi
 
