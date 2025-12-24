@@ -1,14 +1,14 @@
 show=drun
-prompt=Search
-width=520
-height=360
+prompt=Search apps…
+width=560
+height=420
 allow_images=true
-image_size=24
+image_size=28
 insensitive=true
-term=kitty
 matching=fuzzy
 columns=1
 location=center
 no_actions=true
 hide_scroll=true
+term=kitty
 

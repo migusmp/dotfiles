@@ -1,72 +1,93 @@
 /* ======================
-   WOFI - MIGUS (FIXED)
+   WOFI - MIGUS (MODERN)
 ====================== */
 
 * {
-  font-family: Inter;
+  font-family: Inter, "JetBrainsMono Nerd Font";
   font-size: 14px;
 }
 
-/* Window */
+/* Window (glass + border) */
 window {
-  background-color: rgba(18, 18, 18, 0.90);
-  border-radius: 18px;
+  background: rgba(14, 14, 14, 0.92);
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
 
-/* Input */
-#input {
-  margin: 14px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: none;
-  background: rgba(10,10,10,0.85);
-  color: #ffffff;
+/* Main layout padding */
+#outer-box {
+  padding: 14px;
 }
 
-/* List container */
 #inner-box {
-  margin: 6px 10px 10px 10px;
+  margin-top: 10px;
 }
 
-/* Entry */
+/* Search input */
+#input {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.35);
+  color: #ffffff;
+
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+}
+
+#input:focus {
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+/* Entry rows */
 #entry {
-  padding: 10px 12px;
-  margin: 4px 0;
-  border-radius: 12px;
+  padding: 11px 12px;
+  margin: 6px 0;
+  border-radius: 14px;
   background: transparent;
 }
 
-/* TEXT NORMAL */
 #entry #text {
-  color: #ffffff;
+  color: rgba(255,255,255,0.92);
 }
 
-/* SELECTED */
-#entry:selected {
-  background-color: @accent; /* accent */
-}
-
-/* TEXT SELECTED */
-#entry:selected #text {
-  color: #000000;
-}
-
-/* FOCUS (keyboard navigation) */
-#entry:focus {
-  background-color: rgba(255,255,255,0.15);
-}
-
-#entry:focus #text {
-  color: #ffffff;
-}
-
-/* Icons */
+/* Icon spacing */
 #img {
   margin-right: 12px;
 }
 
-/* Hide scrollbar */
+/* Hover */
+#entry:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+/* Keyboard focus (subtle) */
+#entry:focus {
+  background: rgba(255,255,255,0.08);
+}
+
+/* Selected (clean + readable) */
+#entry:selected {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.14),
+    rgba(255,255,255,0.08)
+  );
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+#entry:selected #text {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Hide scrollbar completely */
 #scroll {
   margin: 0;
+}
+scrollbar, scrollbar slider {
+  opacity: 0;
+  min-width: 0;
+  min-height: 0;
 }
 

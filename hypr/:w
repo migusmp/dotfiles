@@ -31,10 +31,11 @@ bind = $mod, N, exec, swaync-client -t
 bind = $mod SHIFT, N, exec, swaync-client -d
 
 # Resize 5px (fine control)
-bind = SUPER ALT SHIFT, H, resizeactive, -40 0
-bind = SUPER ALT SHIFT, L, resizeactive,  40 0
-bind = SUPER ALT SHIFT, K, resizeactive,  0 -40
-bind = SUPER ALT SHIFT, J, resizeactive,  0  40
+bind = SUPER ALT SHIFT, H, resizeactive, -20 0
+bind = SUPER ALT SHIFT, L, resizeactive,  20 0
+bind = SUPER ALT SHIFT, K, resizeactive,  0 -20
+bind = SUPER ALT SHIFT, J, resizeactive,  0  20
+
 
 # Fondos aleatorios
 bind = CTRL ALT, W, exec, ~/.config/hypr/scripts/wallpapers/wallpaper-random.sh
