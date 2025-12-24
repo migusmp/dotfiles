@@ -236,19 +236,24 @@ EOF
 setup_audio_pipewire() {
   log "Audio: PipeWire + WirePlumber (replacing PulseAudio)"
 
-  # 1) Remove pulseaudio first to avoid conflicts
+  # 0) Stop user pulseaudio if running (non fatal)
+  systemctl --user stop pulseaudio.service pulseaudio.socket 2>/dev/null || true
+
+  # 1) Remove PulseAudio daemon if present (ignore if not installed)
   if pacman -Q pulseaudio >/dev/null 2>&1; then
-    warn "Removing pulseaudio to avoid conflict with pipewire-pulse"
-    sudo pacman -Rns --noconfirm pulseaudio pulseaudio-alsa || true
+    warn "Removing pulseaudio (conflicts with pipewire-pulse)"
+    sudo pacman -Rns --noconfirm pulseaudio || true
   fi
 
-  # 2) Install pipewire stack
+  # Optional packages may not exist in all systems, ignore errors
+  sudo pacman -Rns --noconfirm pulseaudio-alsa pulseaudio-bluetooth 2>/dev/null || true
+
+  # 2) Install PipeWire stack (now no conflict)
   pac_install pipewire wireplumber pipewire-alsa pipewire-pulse pavucontrol
 
-  # 3) Enable user services (non-fatal during install)
+  # 3) Enable user services
   systemctl --user enable --now pipewire.service pipewire-pulse.service wireplumber.service || true
 }
-
 
 main() {
   confirm_sudo
