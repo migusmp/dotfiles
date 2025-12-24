@@ -12,6 +12,32 @@ REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "
 
 CONFIG_DIR="$HOME/.config"
 
+detect_dotfiles_dir() {
+  # Prefer ./dotfiles if exists
+  if [[ -d "$REPO_DIR/dotfiles" ]]; then
+    echo "$REPO_DIR/dotfiles"
+    return
+  fi
+
+  # If hypr exists at repo root, use repo root
+  if [[ -d "$REPO_DIR/hypr" || -d "$REPO_DIR/waybar" || -d "$REPO_DIR/wofi" || -d "$REPO_DIR/nvim" || -d "$REPO_DIR/neovim" ]]; then
+    echo "$REPO_DIR"
+    return
+  fi
+
+  # Last resort: search up to depth 3 for hypr folder and use its parent
+  local hypr_path
+  hypr_path="$(find "$REPO_DIR" -maxdepth 3 -type d -name hypr -print -quit 2>/dev/null || true)"
+  if [[ -n "$hypr_path" ]]; then
+    dirname "$hypr_path"
+    return
+  fi
+
+  echo "$REPO_DIR"
+}
+
+DOTFILES_DIR="$(detect_dotfiles_dir)"
+
 # If repo has ./dotfiles use it, otherwise use repo root
 if [[ -d "$REPO_DIR/dotfiles" ]]; then
   DOTFILES_DIR="$REPO_DIR/dotfiles"
@@ -325,14 +351,29 @@ main() {
   install_kitty
 
   # Dotfiles configs (repo -> ~/.config)
-  log "Installing dotfiles configs"
-  mkdir -p "$CONFIG_DIR"
+log "Installing dotfiles configs"
+log "REPO_DIR = $REPO_DIR"
+log "DOTFILES_DIR = $DOTFILES_DIR"
+ls -la "$DOTFILES_DIR" || true
 
-  install_config_dir hypr
-  install_config_dir hypridle
-  install_config_dir waybar
-  install_config_dir wofi
+mkdir -p "$CONFIG_DIR"
+
+install_config_dir hypr
+install_config_dir hypridle
+install_config_dir waybar
+install_config_dir wofi
+
+# soportar repo con carpeta "neovim" o "nvim"
+if [[ -d "$DOTFILES_DIR/nvim" ]]; then
   install_config_dir nvim
+elif [[ -d "$DOTFILES_DIR/neovim" ]]; then
+  # copia neovim -> ~/.config/nvim (para que nvim lo lea)
+  log "Installing config folder: neovim -> ~/.config/nvim"
+  backup_path "$CONFIG_DIR/nvim"
+  cp -a "$DOTFILES_DIR/neovim" "$CONFIG_DIR/nvim"
+else
+  warn "No nvim/ or neovim/ directory found; skipping Neovim config."
+fi
 
   # AUR apps
   log "Installing AUR helper & optional AUR packages"
