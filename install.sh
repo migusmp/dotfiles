@@ -9,8 +9,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")"
-DOTFILES_DIR="$REPO_DIR/dotfiles"
+
 CONFIG_DIR="$HOME/.config"
+
+# If repo has ./dotfiles use it, otherwise use repo root
+if [[ -d "$REPO_DIR/dotfiles" ]]; then
+  DOTFILES_DIR="$REPO_DIR/dotfiles"
+else
+  DOTFILES_DIR="$REPO_DIR"
+fi
 
 log() { printf "\n\033[1;32m==>\033[0m %s\n" "$*"; }
 warn() { printf "\n\033[1;33m[WARN]\033[0m %s\n" "$*"; }
@@ -229,15 +236,16 @@ EOF
 setup_audio_pipewire() {
   log "Audio: PipeWire + WirePlumber (replacing PulseAudio)"
 
-  pac_install pipewire wireplumber pipewire-alsa pipewire-pulse pavucontrol
-
-  # Remove PulseAudio daemon if present (conflicts with pipewire-pulse)
+  # 1) Remove pulseaudio first to avoid conflicts
   if pacman -Q pulseaudio >/dev/null 2>&1; then
-    warn "Removing pulseaudio (will use pipewire-pulse instead)"
+    warn "Removing pulseaudio to avoid conflict with pipewire-pulse"
     sudo pacman -Rns --noconfirm pulseaudio pulseaudio-alsa || true
   fi
 
-  # Enable user services
+  # 2) Install pipewire stack
+  pac_install pipewire wireplumber pipewire-alsa pipewire-pulse pavucontrol
+
+  # 3) Enable user services (non-fatal during install)
   systemctl --user enable --now pipewire.service pipewire-pulse.service wireplumber.service || true
 }
 
