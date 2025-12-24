@@ -226,6 +226,22 @@ map ctrl+shift+v paste_from_clipboard
 EOF
 }
 
+setup_audio_pipewire() {
+  log "Audio: PipeWire + WirePlumber (replacing PulseAudio)"
+
+  pac_install pipewire wireplumber pipewire-alsa pipewire-pulse pavucontrol
+
+  # Remove PulseAudio daemon if present (conflicts with pipewire-pulse)
+  if pacman -Q pulseaudio >/dev/null 2>&1; then
+    warn "Removing pulseaudio (will use pipewire-pulse instead)"
+    sudo pacman -Rns --noconfirm pulseaudio pulseaudio-alsa || true
+  fi
+
+  # Enable user services
+  systemctl --user enable --now pipewire.service pipewire-pulse.service wireplumber.service || true
+}
+
+
 main() {
   confirm_sudo
 
@@ -266,10 +282,11 @@ main() {
     wl-clipboard \
     grim slurp \
     brightnessctl \
-    pipewire wireplumber pipewire-alsa pipewire-pulse pavucontrol \
     networkmanager network-manager-applet \
     polkit-gnome \
     jq socat
+
+  setup_audio_pipewire
 
   log "Enabling NetworkManager"
   enable_service NetworkManager
