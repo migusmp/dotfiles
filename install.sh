@@ -392,7 +392,6 @@ fi
     postman-bin \
     heroic-games-launcher-bin \
     bat \
-    yazi-git \
     fzf-tab
 
   log "Done."
