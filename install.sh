@@ -126,7 +126,13 @@ install_zsh() {
   log "Installing ZSH and Oh My Zsh + plugins (awesomepanda)"
 
   # deps útiles para tu zshrc
-  pac_install zsh curl git tmux lsd tty-clock
+  pac_install zsh curl git tmux lsd
+
+  if need_cmd yay; then
+    yay -S --needed --noconfirm tty-clock
+  else
+    warn "yay not found; skipping tty-clock (AUR)."
+  fi
 
   # poner zsh como shell por defecto
   if [[ "${SHELL:-}" != "/bin/zsh" ]]; then
