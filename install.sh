@@ -458,9 +458,7 @@ fi
   install_yay_if_missing
   aur_install \
     brave-bin \
-    neovide-bin \
     postman-bin \
-    heroic-games-launcher-bin \
     bat \
     fzf-tab
 
