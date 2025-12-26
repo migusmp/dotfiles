@@ -12,6 +12,40 @@ REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "
 
 CONFIG_DIR="$HOME/.config"
 
+ensure_xampp_compat() {
+  log "Ensuring XAMPP compatibility (libxcrypt-compat)"
+
+  sudo pacman -S --needed --noconfirm libxcrypt-compat
+
+  if [[ -x /opt/lampp/lampp ]]; then
+    log "Starting XAMPP"
+    sudo /opt/lampp/lampp start
+  else
+    warn "XAMPP not found at /opt/lampp"
+  fi
+}
+
+install_xampp() {
+  log "Installing XAMPP (LAMPP stack)"
+
+  XAMPP_DIR="/opt/lampp"
+  INSTALLER="/tmp/xampp-installer.run"
+  XAMPP_URL="https://sourceforge.net/projects/xampp/files/XAMPP%20Linux/8.2.12/xampp-linux-x64-8.2.12-0-installer.run/download"
+
+  # --- 1) Si ya existe, no reinstalar ---
+  if [[ -d "$XAMPP_DIR" ]]; then
+    log "XAMPP already installed at $XAMPP_DIR"
+  else
+    log "Downloading XAMPP installer"
+    wget -O "$INSTALLER" "$XAMPP_URL"
+
+    chmod +x "$INSTALLER"
+
+    log "Running XAMPP installer (GUI)"
+    sudo "$INSTALLER"
+  fi
+}
+
 install_cloudflare_warp() {
   log "Installing Cloudflare WARP (1.1.1.1) + ensuring daemon/registration"
 
@@ -338,6 +372,7 @@ alias heroicgameslauncher='heroic --enable-features=UseOzonePlatform --ozone-pla
 alias nv='neovide'
 alias lsa='lsd -la'
 alias ls='lsd'
+alias ipinfo='curl ipinfo.io'
 
 alias access_token='sudo cat ~/secure/.access_token'
 alias nasm_fix='nasm -f elf64 -w+all'
@@ -536,6 +571,9 @@ fi
   install_vscode_config
 
   install_cloudflare_warp
+
+  install_xampp
+  ensure_xampp_compat
 
   log "Done."
   warn "IMPORTANT: logout/login to apply docker group changes (or reboot)."
