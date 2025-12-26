@@ -12,6 +12,171 @@ REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "
 
 CONFIG_DIR="$HOME/.config"
 
+install_tmux_pro() {
+  log "Installing tmux pro setup (TPM + sessionizer + config)"
+
+  # 1) Packages
+  sudo pacman -S --needed --noconfirm \
+    tmux git fzf fd ripgrep bat wl-clipboard
+
+  # 2) Projects root
+  mkdir -p "$HOME/workspace/projects"
+
+  # 3) Sessionizer script
+  mkdir -p "$HOME/.local/bin"
+  cat > "$HOME/.local/bin/tmux-sessionizer" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$HOME/workspace/projects"
+[[ -d "$ROOT" ]] || ROOT="$HOME"
+
+if ! command -v fzf >/dev/null 2>&1; then
+  echo "tmux-sessionizer: fzf not installed" >&2
+  exit 1
+fi
+
+list_dirs() {
+  if command -v fd >/dev/null 2>&1; then
+    fd -t d -d 3 . "$ROOT" 2>/dev/null
+  else
+    find "$ROOT" -maxdepth 3 -type d 2>/dev/null
+  fi
+}
+
+dir="$(list_dirs | fzf --prompt="Projects > " --height=60% --reverse || true)"
+[[ -z "${dir:-}" ]] && exit 0
+
+name="$(basename "$dir" | tr '. ' '__')"
+
+if tmux has-session -t "$name" 2>/dev/null; then
+  tmux switch-client -t "$name"
+else
+  tmux new-session -d -s "$name" -c "$dir"
+  tmux switch-client -t "$name"
+fi
+EOF
+  chmod +x "$HOME/.local/bin/tmux-sessionizer"
+
+  # 4) TPM
+  mkdir -p "$HOME/.tmux/plugins"
+  if [[ ! -d "$HOME/.tmux/plugins/tpm" ]]; then
+    git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+  else
+    (cd "$HOME/.tmux/plugins/tpm" && git pull --ff-only) || true
+  fi
+
+  # 5) tmux.conf (your working config)
+  cat > "$HOME/.tmux.conf" <<'EOF'
+##### General #####
+set -g mouse on
+set -g history-limit 200000
+set -g base-index 1
+setw -g pane-base-index 1
+set -g renumber-windows on
+
+# Faster escape (better for nvim)
+set -g escape-time 0
+set -g focus-events on
+
+# Truecolor + better terminal
+set -g default-terminal "tmux-256color"
+set -as terminal-features ',xterm-256color:RGB'
+
+##### Prefix #####
+unbind C-b
+set -g prefix C-a
+bind C-a send-prefix
+
+##### Splits (more natural) #####
+unbind '"'
+unbind %
+bind | split-window -h -c "#{pane_current_path}"
+bind - split-window -v -c "#{pane_current_path}"
+
+##### Reload config #####
+bind r source-file ~/.tmux.conf \; display-message "tmux reloaded"
+
+##### Navigation (vim-like, no prefix) #####
+bind -n C-h select-pane -L
+bind -n C-j select-pane -D
+bind -n C-k select-pane -U
+bind -n C-l select-pane -R
+
+##### Resize panes (Alt + hjkl) #####
+bind -n M-h resize-pane -L 5
+bind -n M-l resize-pane -R 5
+bind -n M-j resize-pane -D 5
+bind -n M-k resize-pane -U 5
+
+##### Copy mode (vi) + Wayland clipboard #####
+setw -g mode-keys vi
+bind -T copy-mode-vi v send -X begin-selection
+bind -T copy-mode-vi y send -X copy-pipe-and-cancel "wl-copy"
+bind -T copy-mode-vi Escape send -X cancel
+
+# Quick copy-mode
+bind [ copy-mode
+
+##### Quality: keep cwd when creating windows/panes #####
+bind c new-window -c "#{pane_current_path}"
+
+##### Better window switching #####
+bind -n M-1 select-window -t 1
+bind -n M-2 select-window -t 2
+bind -n M-3 select-window -t 3
+bind -n M-4 select-window -t 4
+bind -n M-5 select-window -t 5
+bind -n M-6 select-window -t 6
+bind -n M-7 select-window -t 7
+bind -n M-8 select-window -t 8
+bind -n M-9 select-window -t 9
+
+##### Sessionizer (fzf) #####
+# Prefix + f opens project picker and attaches/creates session
+# Use popup if supported; fallback to split if not.
+if-shell -b 'tmux -V | awk "{print \\$2}" | awk -F. "{exit !(\\$1>3 || (\\$1==3 && \\$2>=2))}"' \
+  'bind f display-popup -E "$HOME/.local/bin/tmux-sessionizer"' \
+  'bind f split-window -v -c "#{pane_current_path}" "$HOME/.local/bin/tmux-sessionizer"'
+
+##### Status bar (clean + useful) #####
+set -g status on
+set -g status-interval 3
+set -g status-style bg=default,fg=white
+
+set -g status-left-length 60
+set -g status-left "#[fg=cyan] #S #[fg=white]| #[fg=magenta]#(whoami) "
+
+set -g status-right-length 140
+set -g status-right "#[fg=yellow]#(git -C #{pane_current_path} rev-parse --abbrev-ref HEAD 2>/dev/null) #[fg=white]| #[fg=green]%Y-%m-%d %H:%M "
+
+##### Plugins (TPM) #####
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-sensible'
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+
+# Resurrect/Continuum config
+set -g @continuum-restore 'on'
+set -g @resurrect-capture-pane-contents 'on'
+
+run '~/.tmux/plugins/tpm/tpm'
+EOF
+
+  log "tmux config installed: ~/.tmux.conf"
+  log "sessionizer installed: ~/.local/bin/tmux-sessionizer"
+  log "TPM installed: ~/.tmux/plugins/tpm"
+
+  # 6) Optional: if we're already inside tmux, reload + install plugins
+  if [[ -n "${TMUX:-}" ]]; then
+    tmux source-file "$HOME/.tmux.conf" || true
+    # Install plugins: prefix + I is the usual way; this tries to do it automatically
+    tmux run-shell "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
+  else
+    warn "Open tmux and press Ctrl+a then I to install plugins (TPM)."
+  fi
+}
+
 ensure_xampp_compat() {
   log "Ensuring XAMPP compatibility (libxcrypt-compat)"
 
@@ -329,84 +494,159 @@ install_zsh() {
 
   log "Writing ~/.zshrc (your config)"
   cat > "$HOME/.zshrc" <<'EOF'
-#a
-#If you come from bash you might have to change your $PATH.
+# =========================================================
+# Zsh PRO config (Oh-My-Zsh + tmux workflow)
+# =========================================================
+
+# If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
-export ZSH="$HOME/.oh-my-zsh"
+# -------------------------
+# PATH (keep it in one place)
+# -------------------------
+typeset -U path PATH
+path=(
+  "$HOME/bin"
+  "$HOME/.cargo/bin"
+  "$HOME/.surrealdb"
+  "$HOME/.local/bin"     # pipx
+  $path
+)
+export PATH
 
+# -------------------------
+# Oh-My-Zsh
+# -------------------------
+export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="awesomepanda"
 
 plugins=(
-    git
-    archlinux
-    zsh-autosuggestions
-#    zsh-syntax-highlighting
-    fast-syntax-highlighting
+  git
+  archlinux
+  zsh-autosuggestions
+  fast-syntax-highlighting
 )
 
-source $ZSH/oh-my-zsh.sh
+source "$ZSH/oh-my-zsh.sh"
 
-# My alias
-alias cty='tty-clock -S -c -C 6 -t -n -D'
-alias fucking='sudo'
-alias n='nvim'
+# -------------------------
+# FZF (Ctrl+R history, completion)
+# -------------------------
+if [[ -f /usr/share/fzf/key-bindings.zsh ]]; then
+  source /usr/share/fzf/key-bindings.zsh
+fi
+if [[ -f /usr/share/fzf/completion.zsh ]]; then
+  source /usr/share/fzf/completion.zsh
+fi
 
-alias t='tmux'
-alias ta='tmux attach'
-alias tl='tmux ls'
-
-alias cd..='cd ..'
-
-alias gc='git clone '
-alias ga='git add .'
-alias gcm='git commit -m '
-alias gp='git push -u origin main'
-alias gs='git status'
-
-alias py='python3'
-alias icat='kitty +kitten icat'
-alias hypr='exec hyprland'
-alias vscode='code --disable-gpu'
-alias heroicgameslauncher='heroic --enable-features=UseOzonePlatform --ozone-platform=x11'
-alias nv='neovide'
-alias lsa='lsd -la'
-alias ls='lsd'
-alias ipinfo='curl ipinfo.io'
-
-alias access_token='sudo cat ~/secure/.access_token'
-alias nasm_fix='nasm -f elf64 -w+all'
-alias dockerdbrustydrive='docker exec -it postgres_db psql -U admin -d rusty_drive_db'
-
-HISTFILE=~/.zsh_history
-HISTSIZE=10000
-SAVEHIST=10000
+# -------------------------
+# History (pro)
+# -------------------------
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=50000
+SAVEHIST=50000
 setopt appendhistory
+setopt sharehistory
+setopt hist_ignore_dups
+setopt hist_ignore_space
+setopt inc_append_history
 
-# fastfetch
+# -------------------------
+# QoL options
+# -------------------------
+setopt autocd
+setopt correct
+autoload -Uz compinit && compinit
+zstyle ':completion:*' menu select
 
-export PATH=~/bin:$PATH
-export PATH="$HOME/.surrealdb:$PATH"
-export PATH="$PATH:$HOME/.local/bin"
-export PATH="$HOME/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# Yazi Setup
+# -------------------------
+# Editor
+# -------------------------
 export EDITOR="nvim"
+
+# -------------------------
+# Pywal (optional)
+# -------------------------
+# (cat ~/.cache/wal/sequences &)
+# source ~/.cache/wal/colors-tty.sh
+
+# -------------------------
+# Yazi (cd on exit)
+# -------------------------
 function y() {
   local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-  yazi "$@" --cwd-file="$tmp"
-  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+  command yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [[ -n "$cwd" && "$cwd" != "$PWD" ]]; then
     builtin cd -- "$cwd"
   fi
   rm -f -- "$tmp"
 }
 
-# . "/home/migus/.deno/env"
+# -------------------------
+# Aliases
+# -------------------------
 
+# Terminal / tools
+alias cty='tty-clock -S -c -C 6 -t -n -D'
+alias fucking='sudo'
+alias n='nvim'
+alias py='python3'
+alias icat='kitty +kitten icat'
+alias nv='neovide'
+alias ipinfo='curl -s ipinfo.io'
+
+# ls (you use lsd)
+alias ls='lsd'
+alias lsa='lsd -la'
+
+# cd
+alias cd..='cd ..'
+
+# tmux
+alias t='tmux'
+alias ta='tmux attach'
+alias tl='tmux ls'
+
+# Git (avoid conflicts)
+alias gcl='git clone '
+alias ga='git add .'
+alias gcm='git commit -m '
+alias gp='git push -u origin main'
+alias gs='git status'
+
+# C/C++ (don’t override git clone)
+alias gpp='g++ -o o'
+
+# Hyprland / apps
+alias hypr='exec hyprland'
+alias vscode='code --disable-gpu'
+alias heroicgameslauncher='heroic --enable-features=UseOzonePlatform --ozone-platform=x11'
+
+# Secrets / misc
+alias access_token='sudo cat ~/secure/.access_token'
+alias nasm_fix='nasm -f elf64 -w+all'
+alias dockerdbrustydrive='docker exec -it postgres_db psql -U admin -d rusty_drive_db'
+
+# XAMPP
 alias xampp-start='sudo /opt/lampp/lampp start'
 alias xampp-stop='sudo /opt/lampp/lampp stop'
 alias xampp-restart='sudo /opt/lampp/lampp restart'
+
+# -------------------------
+# Auto-start tmux (optional)
+# Set to 1 to enable
+# -------------------------
+AUTO_TMUX="${AUTO_TMUX:-0}"
+
+if [[ "$AUTO_TMUX" == "1" ]] && [[ -o interactive ]] && command -v tmux >/dev/null 2>&1; then
+  if [[ -z "${TMUX:-}" ]]; then
+    tmux new-session -A -s main
+  fi
+fi
+
+# -------------------------
+# End
+# -------------------------
 EOF
 }
 
@@ -465,7 +705,7 @@ main() {
   log "Installing base dev tools"
   pac_install \
     base-devel git curl wget unzip zip \
-    ripgrep fd fzf \
+    ripgrep fd fzf eza bat starship \
     neovim tmux code \
     openssh rsync \
     htop btop tree lsof strace \
@@ -574,6 +814,7 @@ fi
 
   install_xampp
   ensure_xampp_compat
+  install_tmux_pro
 
   log "Done."
   warn "IMPORTANT: logout/login to apply docker group changes (or reboot)."
