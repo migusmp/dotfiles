@@ -437,6 +437,8 @@ install_config_dir hypr
 install_config_dir hypridle
 install_config_dir hyprlock
 install_config_dir waybar
+install_config_dir swaync
+install_config_dir cava
 install_config_dir wofi
 
 # soportar repo con carpeta "neovim" o "nvim"
