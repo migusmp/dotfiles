@@ -1,0 +1,13 @@
+bmewburn.vscode-intelephense-client
+esbenp.prettier-vscode
+laravel.vscode-laravel
+openai.chatgpt
+pkief.material-icon-theme
+redhat.java
+rust-lang.rust-analyzer
+serayuzgur.crates
+usernamehw.errorlens
+vmware.vscode-spring-boot
+vscjava.vscode-maven
+yoavbls.pretty-ts-errors
+zhuangtongfa.material-theme

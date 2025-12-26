@@ -12,6 +12,70 @@ REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "
 
 CONFIG_DIR="$HOME/.config"
 
+install_vscode_config() {
+  log "Installing VS Code configuration"
+
+  local src="$DOTFILES_DIR/vscode"
+  local dest="$HOME/.config/Code/User"
+
+  if [[ ! -d "$src" ]]; then
+    warn "No vscode/ directory found in dotfiles; skipping VS Code config."
+    return 0
+  fi
+
+  mkdir -p "$dest"
+
+  for f in settings.json keybindings.json tasks.json; do
+    if [[ -f "$src/$f" ]]; then
+      backup_path "$dest/$f"
+      cp "$src/$f" "$dest/$f"
+      log "Installed VS Code $f"
+    fi
+  done
+
+  if [[ -d "$src/snippets" ]]; then
+    mkdir -p "$dest/snippets"
+    cp -a "$src/snippets/." "$dest/snippets/"
+    log "Installed VS Code snippets"
+  fi
+
+  # Extensions
+  if [[ -f "$src/extensions.txt" ]]; then
+    if need_cmd code; then
+      log "Installing VS Code extensions"
+      while IFS= read -r ext; do
+        [[ -n "$ext" ]] && code --install-extension "$ext" || true
+      done < "$src/extensions.txt"
+    else
+      warn "VS Code not found; skipping extension install."
+    fi
+  fi
+}
+
+create_workspace_tree() {
+  log "Creating ~/workspace tree"
+
+  local base="$HOME/workspace"
+
+  # EDITA AQUÍ tu estructura
+  local -a WORKSPACE_DIRS=(
+    "projects"
+    "repos"
+    "sandbox"
+    "notes"
+    "downloads"
+  )
+
+  mkdir -p "$base"
+  for d in "${WORKSPACE_DIRS[@]}"; do
+    mkdir -p "$base/$d"
+  done
+
+  log "Workspace created at: $base"
+  printf " - %s\n" "${WORKSPACE_DIRS[@]/#/$base/}" || true
+}
+
+
 detect_dotfiles_dir() {
   # Prefer ./dotfiles if exists
   if [[ -d "$REPO_DIR/dotfiles" ]]; then
@@ -302,7 +366,7 @@ main() {
   pac_install \
     base-devel git curl wget unzip zip \
     ripgrep fd fzf \
-    neovim tmux \
+    neovim tmux code \
     openssh rsync \
     htop btop tree lsof strace \
     archlinux-keyring
@@ -322,6 +386,7 @@ main() {
     hyprlock hypridle \
     waybar \
     wofi \
+    lsd \
     kitty \
     cmatrix \
     swaync \
@@ -390,13 +455,18 @@ fi
   log "Installing AUR helper & optional AUR packages"
   install_yay_if_missing
   aur_install \
-    visual-studio-code-bin \
     brave-bin \
     neovide-bin \
     postman-bin \
     heroic-games-launcher-bin \
     bat \
     fzf-tab
+
+  log "Creating workspace..."
+  create_workspace_tree
+
+  log "Seting up vscode..."
+  install_vscode_config
 
   log "Done."
   warn "IMPORTANT: logout/login to apply docker group changes (or reboot)."
