@@ -1,25 +1,40 @@
+/* ======================
+   WAYBAR - Modern Glass
+====================== */
+
+@define-color accent #ff3355;
+@define-color bg rgba(0, 0, 0, 0.55);
+@define-color bg2 rgba(255, 255, 255, 0.06);
+@define-color text #ffffff;
+@define-color text2 rgba(255, 255, 255, 0.75);
+@define-color border rgba(255, 255, 255, 0.10);
+@define-color shadow rgba(0, 0, 0, 0.35);
+
+/* Global */
 * {
   border: none;
-  font-family: "Roboto Mono Medium", Helvetica, Arial, sans-serif;
+  border-radius: 0;
+  font-family: "Roboto Mono Medium", "JetBrainsMono Nerd Font", monospace;
   font-size: 10px;
   min-height: 0;
 }
 
+/* Bar */
 window#waybar {
-  background-color: rgba(0, 0, 0, 0.9);
-  color: #ffffff;
+  background: @bg;
+  color: @text;
+  border: 1px solid @border;
+  margin: 8px 10px;
+  padding: 4px 6px;
+  box-shadow: 0 10px 30px @shadow;
+
+  /* En algunos sistemas funciona (si no, no pasa nada) */
+  -gtk-icon-effect: none;
 }
 
-/* Workspaces */
-#workspaces button {
-  color: #ffffff;
-  box-shadow: inset 0 -3px transparent;
-  padding: 0 6px;
-  margin: 4px 2px;
-}
-
-
-/* Modules */
+/* Espaciado general de módulos */
+#workspaces,
+#window,
 #clock,
 #battery,
 #cpu,
@@ -28,43 +43,145 @@ window#waybar {
 #backlight,
 #network,
 #pulseaudio,
-#custom-media,
 #tray,
-#mode,
 #idle_inhibitor,
 #mpd,
-#window {
-  padding: 0 10px;
-  margin: 6px 3px;
-  color: #ffffff;
-}
-
-#window,
-#workspaces {
-  margin: 0 4px;
-}
-
-#clock,
-#battery,
-#cpu,
-#memory,
-#backlight,
-#network,
-#pulseaudio {
-  color: #ffffff;
-}
-
-#network.disconnected {
-  background-color: #f53c3c;
-}
-
+#mode,
 #custom-media {
-  background-color: #66cc99;
-  color: #2a5c45;
-  min-width: 100px;
+  /* background: @bg2; */
+  border: 1px solid @border;
+  border-radius: 999px;
+  padding: 4px 10px;
+  margin: 4px 4px;
+  color: @text;
 }
 
+/* Hover “soft” en módulos */
+#clock:hover,
+#battery:hover,
+#cpu:hover,
+#memory:hover,
+#temperature:hover,
+#backlight:hover,
+#network:hover,
+#pulseaudio:hover,
+#tray:hover,
+#idle_inhibitor:hover,
+#custom-media:hover,
+#mpd:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* Window title más discreto */
+#window {
+  background: transparent;
+  border: none;
+  color: @text2;
+  padding: 0 8px;
+}
+
+/* ======================
+   WORKSPACES (bonitos)
+====================== */
+#workspaces {
+  padding: 3px 6px;
+}
+
+#workspaces button {
+  background: transparent;
+  color: @text2;
+  padding: 2px 8px;
+  margin: 2px 3px;
+  border-radius: 999px;
+  box-shadow: none;
+  transition: all 0.15s ease;
+}
+
+#workspaces button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: @text;
+}
+
+/* Activo: pill con borde accent */
+#workspaces button.active {
+  background: rgba(255, 51, 85, 0.16);
+  border: 1px solid rgba(255, 51, 85, 0.65);
+  color: @text;
+}
+
+/* Urgent */
+#workspaces button.urgent {
+  background: rgba(255, 80, 80, 0.18);
+  border: 1px solid rgba(255, 80, 80, 0.70);
+  color: @text;
+}
+
+/* ======================
+   MODULE STATES
+====================== */
+
+/* Network */
+#network {
+  color: @text;
+}
+#network.disconnected {
+  background: rgba(245, 60, 60, 0.20);
+  border-color: rgba(245, 60, 60, 0.65);
+}
+
+/* Pulseaudio */
+#pulseaudio.muted {
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Temperature */
+#temperature.critical {
+  background: rgba(255, 80, 80, 0.20);
+  border-color: rgba(255, 80, 80, 0.70);
+}
+
+/* Battery */
+#battery.warning {
+  background: rgba(255, 200, 80, 0.18);
+  border-color: rgba(255, 200, 80, 0.55);
+}
+#battery.critical {
+  background: rgba(255, 80, 80, 0.20);
+  border-color: rgba(255, 80, 80, 0.70);
+}
+#battery.charging {
+  background: rgba(120, 255, 180, 0.14);
+  border-color: rgba(120, 255, 180, 0.45);
+}
+
+/* Tray */
 #tray {
-  background-color: #2980b9;
+  padding: 4px 8px;
+}
+#tray > .passive {
+  -gtk-icon-effect: dim;
+  opacity: 0.8;
+}
+
+/* Idle inhibitor */
+#idle_inhibitor.activated {
+  background: rgba(255, 51, 85, 0.16);
+  border-color: rgba(255, 51, 85, 0.60);
+}
+
+/* Custom media (si lo usas) */
+#custom-media {
+  color: @text;
+  min-width: 0;
+}
+
+/* Separadores opcionales: si usas módulos custom */
+#custom-sep {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.25);
+  padding: 0 6px;
 }
 

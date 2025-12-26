@@ -222,55 +222,116 @@ if-shell -b 'tmux -V | awk "{print \\$2}" | awk -F. "{exit !(\\$1>3 || (\\$1==3 
   'bind f split-window -v -c "#{pane_current_path}" "$HOME/.local/bin/tmux-sessionizer"'
 
 ##### Fuzzy switch windows/panes #####
+# Prefix + w: fuzzy select window
 bind w display-popup -E 'tmux list-windows -F "#{window_index}: #{window_name}  (#{window_panes} panes)" | fzf | cut -d: -f1 | xargs -r tmux select-window -t'
+# Prefix + p: fuzzy select pane across session
 bind p display-popup -E 'tmux list-panes -s -F "#{session_name}:#{window_index}.#{pane_index}  #{pane_current_path}" | fzf | awk "{print \\$1}" | xargs -r tmux select-pane -t'
 
 ##### Search across panes (last ~5000 lines each) #####
+# Prefix + / then type query
 bind / command-prompt -p "Search panes:" \
   "run-shell 'q=\"%%\"; tmux list-panes -a -F \"#D\" | while read -r id; do tmux capture-pane -pt \"${id}\" -S -5000 | rg -n --color=never \"$q\" && echo \"---\"; done | less -R'"
 
 ##### Sync panes (multi-cursor) #####
+# Prefix + s toggles synchronize-panes
 bind s setw synchronize-panes \; display-message "sync panes: #{?pane_synchronized,ON,OFF}"
 
 ##### Scratch popup #####
+# Prefix + x opens scratch session
 bind x display-popup -E 'tmux new-session -A -s scratch'
 
 ##### Notifications #####
+# Prefix + N sends a desktop notification
 bind N run-shell 'command -v notify-send >/dev/null 2>&1 && notify-send "tmux" "Done" || true'
 
 ##### Docker control #####
+# Prefix + d opens lazydocker if installed
 bind d display-popup -E 'command -v lazydocker >/dev/null 2>&1 && lazydocker || (echo "lazydocker not installed"; read -r)'
 
 ##### Kill port #####
+# Prefix + k then type a port number (e.g. 3000)
 bind k command-prompt -p "Kill port:" "run-shell 'p=\"%%\"; fuser -k ${p}/tcp 2>/dev/null && tmux display-message \"killed port ${p}\" || tmux display-message \"nothing on ${p}\"'"
 
 ##### Focus mode #####
 bind F set -g status off \; display-message "FOCUS MODE"
 bind B set -g status on  \; display-message "NORMAL MODE"
 
-##### Status bar (clean + useful) #####
+##### THEME: Modern Dark + Accent (clean/pill) #####
+
+# Palette
+set -g @thm_bg        "#0b0f14"
+set -g @thm_bg2       "#111827"
+set -g @thm_fg        "#e5e7eb"
+set -g @thm_muted     "#9ca3af"
+set -g @thm_accent    "#ff3355"
+set -g @thm_blue      "#60a5fa"
+set -g @thm_green     "#34d399"
+set -g @thm_yellow    "#fbbf24"
+set -g @thm_red       "#fb7185"
+
+# Pane borders
+set -g pane-border-style "fg=#{@thm_bg2}"
+set -g pane-active-border-style "fg=#{@thm_accent}"
+
+# Messages / copy-mode
+set -g message-style "bg=#{@thm_bg2},fg=#{@thm_fg}"
+set -g message-command-style "bg=#{@thm_bg2},fg=#{@thm_blue}"
+set -g mode-style "bg=#{@thm_bg2},fg=#{@thm_fg}"
+
+# Popups / menus (tmux >= 3.2)
+set -g menu-style "bg=#{@thm_bg2},fg=#{@thm_fg}"
+set -g menu-selected-style "bg=#{@thm_accent},fg=#{@thm_bg}"
+
+# Status bar
 set -g status on
 set -g status-interval 3
-set -g status-style bg=default,fg=white
+set -g status-style "bg=default,fg=#{@thm_muted}"
+set -g status-position top
+set -g status-justify left
 
-set -g status-left-length 80
-set -g status-left "#[fg=cyan] #S #[fg=white]| #[fg=magenta]#(whoami) "
-
+set -g status-left-length 100
 set -g status-right-length 180
-set -g status-right "#[fg=yellow]#(git -C #{pane_current_path} rev-parse --abbrev-ref HEAD 2>/dev/null) #[fg=white]| #[fg=green]#(tmux-cpu 2>/dev/null) #[fg=cyan]#(tmux-battery 2>/dev/null) #[fg=white]| #[fg=green]%Y-%m-%d %H:%M "
+
+# Left: Arch logo + user
+set -g status-left "#[fg=white]   #[fg=#{@thm_accent},bold]migus #[fg=#{@thm_muted}]│ #[default]"
+
+# Windows: pill tabs
+setw -g window-status-separator " "
+
+setw -g window-status-style "bg=default,fg=#{@thm_accent}"
+setw -g window-status-format "#[fg=#{@thm_accent}]  #I:#W  #[default]"
+
+setw -g window-status-current-style "bg=default,fg=#{@thm_fg}"
+setw -g window-status-current-format "#[bg=#{@thm_accent},fg=#{@thm_bg},bold]  #I:#W  #[default]"
+
+setw -g window-status-activity-style "bg=default,fg=#{@thm_yellow}"
+setw -g window-status-bell-style "bg=default,fg=#{@thm_red},bold"
+
+# Right: git + net + env + dev + clock (pill segments)
+set -g status-right "\
+#[fg=#{@thm_accent}]   #(git -C #{pane_current_path} rev-parse --abbrev-ref HEAD 2>/dev/null || echo '-')  \
+#[fg=#{@thm_accent}]   #(ip -4 addr show up 2>/dev/null | awk '/inet / && $2 !~ /^127\\./ {print $2}' | cut -d/ -f1 | head -n1 || echo '-')  \
+#[fg=#{@thm_accent}]   %H:%M #[fg=#{@thm_muted}]%d/%m  #[default]"
+
+# Make tmux look nicer with slight padding feel
+set -g status-left-style "none"
+set -g status-right-style "none"
 
 ##### Plugins (TPM) #####
 set -g @plugin 'tmux-plugins/tpm'
 set -g @plugin 'tmux-plugins/tmux-sensible'
 
+# Persist sessions
 set -g @plugin 'tmux-plugins/tmux-resurrect'
 set -g @plugin 'tmux-plugins/tmux-continuum'
 set -g @continuum-restore 'on'
 set -g @resurrect-capture-pane-contents 'on'
 
+# Status utils
 set -g @plugin 'tmux-plugins/tmux-cpu'
 set -g @plugin 'tmux-plugins/tmux-battery'
 
+# nvim <-> tmux navigation consistency
 set -g @plugin 'christoomey/vim-tmux-navigator'
 
 run '~/.tmux/plugins/tpm/tpm'
@@ -893,6 +954,7 @@ main() {
     waybar \
     wofi \
     lsd \
+    pamixer \
     kitty \
     cmatrix \
     swaync \
