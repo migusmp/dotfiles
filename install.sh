@@ -20,8 +20,8 @@ install_tmux_ultra() {
     tmux git fzf fd ripgrep bat wl-clipboard psmisc \
     gawk sed coreutils findutils
 
-  # notify-send
-  sudo pacman -S --needed --noconfirm libnotify || true
+  # notify-send (optional)
+  sudo pacman -S --needed --noconfirm libnotify 2>/dev/null || true
 
   # lazydocker (try pacman first; if not available, try AUR helper)
   if ! command -v lazydocker >/dev/null 2>&1; then
@@ -78,55 +78,58 @@ layout="$(
 )"
 [[ -z "${layout:-}" ]] && layout="default"
 
-# 3) create or switch session
-if tmux has-session -t "$name" 2>/dev/null; then
-  tmux switch-client -t "$name"
-  exit 0
+# 3) create session if missing
+if ! tmux has-session -t "$name" 2>/dev/null; then
+  tmux new-session -d -s "$name" -c "$dir"
+
+  case "$layout" in
+    rust)
+      tmux rename-window -t "$name:1" "nvim"
+      tmux send-keys -t "$name:1" "nvim ." C-m
+
+      tmux new-window -t "$name" -n "run" -c "$dir"
+      tmux send-keys -t "$name:2" "cargo run" C-m
+
+      tmux new-window -t "$name" -n "test" -c "$dir"
+      tmux send-keys -t "$name:3" "cargo test" C-m
+      ;;
+    node)
+      tmux rename-window -t "$name:1" "nvim"
+      tmux send-keys -t "$name:1" "nvim ." C-m
+
+      tmux new-window -t "$name" -n "dev" -c "$dir"
+      tmux send-keys -t "$name:2" "pnpm dev || npm run dev || yarn dev" C-m
+
+      tmux new-window -t "$name" -n "test" -c "$dir"
+      tmux send-keys -t "$name:3" "pnpm test || npm test || yarn test" C-m
+      ;;
+    laravel)
+      tmux rename-window -t "$name:1" "nvim"
+      tmux send-keys -t "$name:1" "nvim ." C-m
+
+      tmux new-window -t "$name" -n "serve" -c "$dir"
+      tmux send-keys -t "$name:2" "php artisan serve" C-m
+
+      tmux new-window -t "$name" -n "queue" -c "$dir"
+      tmux send-keys -t "$name:3" "php artisan queue:work" C-m
+      ;;
+    default|*)
+      tmux rename-window -t "$name:1" "nvim"
+      tmux send-keys -t "$name:1" "nvim ." C-m
+
+      tmux new-window -t "$name" -n "shell" -c "$dir"
+      ;;
+  esac
+
+  tmux select-window -t "$name:1"
 fi
 
-tmux new-session -d -s "$name" -c "$dir"
-
-case "$layout" in
-  rust)
-    tmux rename-window -t "$name:1" "nvim"
-    tmux send-keys -t "$name:1" "nvim ." C-m
-
-    tmux new-window -t "$name" -n "run" -c "$dir"
-    tmux send-keys -t "$name:2" "cargo run" C-m
-
-    tmux new-window -t "$name" -n "test" -c "$dir"
-    tmux send-keys -t "$name:3" "cargo test" C-m
-    ;;
-  node)
-    tmux rename-window -t "$name:1" "nvim"
-    tmux send-keys -t "$name:1" "nvim ." C-m
-
-    tmux new-window -t "$name" -n "dev" -c "$dir"
-    tmux send-keys -t "$name:2" "pnpm dev || npm run dev || yarn dev" C-m
-
-    tmux new-window -t "$name" -n "test" -c "$dir"
-    tmux send-keys -t "$name:3" "pnpm test || npm test || yarn test" C-m
-    ;;
-  laravel)
-    tmux rename-window -t "$name:1" "nvim"
-    tmux send-keys -t "$name:1" "nvim ." C-m
-
-    tmux new-window -t "$name" -n "serve" -c "$dir"
-    tmux send-keys -t "$name:2" "php artisan serve" C-m
-
-    tmux new-window -t "$name" -n "queue" -c "$dir"
-    tmux send-keys -t "$name:3" "php artisan queue:work" C-m
-    ;;
-  default|*)
-    tmux rename-window -t "$name:1" "nvim"
-    tmux send-keys -t "$name:1" "nvim ." C-m
-
-    tmux new-window -t "$name" -n "shell" -c "$dir"
-    ;;
-esac
-
-tmux select-window -t "$name:1"
-tmux switch-client -t "$name"
+# 4) attach/switch (works both inside/outside tmux)
+if [[ -z "${TMUX:-}" ]]; then
+  exec tmux attach -t "$name"
+else
+  tmux switch-client -t "$name"
+fi
 EOF
   chmod +x "$HOME/.local/bin/tmux-sessionizer"
 
@@ -138,7 +141,16 @@ EOF
     (cd "$HOME/.tmux/plugins/tpm" && git pull --ff-only) || true
   fi
 
-  # --- tmux.conf ULTRA (includes everything) ---
+  # --- backup existing tmux.conf (if any) ---
+  if declare -F backup_path >/dev/null 2>&1; then
+    backup_path "$HOME/.tmux.conf"
+  else
+    if [[ -f "$HOME/.tmux.conf" ]]; then
+      mv "$HOME/.tmux.conf" "$HOME/.tmux.conf.bak-$(date +%Y%m%d-%H%M%S)"
+    fi
+  fi
+
+  # --- tmux.conf ULTRA ---
   cat > "$HOME/.tmux.conf" <<'EOF'
 ##### General #####
 set -g mouse on
@@ -210,34 +222,26 @@ if-shell -b 'tmux -V | awk "{print \\$2}" | awk -F. "{exit !(\\$1>3 || (\\$1==3 
   'bind f split-window -v -c "#{pane_current_path}" "$HOME/.local/bin/tmux-sessionizer"'
 
 ##### Fuzzy switch windows/panes #####
-# Prefix + w: fuzzy select window
 bind w display-popup -E 'tmux list-windows -F "#{window_index}: #{window_name}  (#{window_panes} panes)" | fzf | cut -d: -f1 | xargs -r tmux select-window -t'
-# Prefix + p: fuzzy select pane across session
 bind p display-popup -E 'tmux list-panes -s -F "#{session_name}:#{window_index}.#{pane_index}  #{pane_current_path}" | fzf | awk "{print \\$1}" | xargs -r tmux select-pane -t'
 
 ##### Search across panes (last ~5000 lines each) #####
-# Prefix + / then type query
 bind / command-prompt -p "Search panes:" \
   "run-shell 'q=\"%%\"; tmux list-panes -a -F \"#D\" | while read -r id; do tmux capture-pane -pt \"${id}\" -S -5000 | rg -n --color=never \"$q\" && echo \"---\"; done | less -R'"
 
 ##### Sync panes (multi-cursor) #####
-# Prefix + s toggles synchronize-panes
 bind s setw synchronize-panes \; display-message "sync panes: #{?pane_synchronized,ON,OFF}"
 
 ##### Scratch popup #####
-# Prefix + x opens scratch session
 bind x display-popup -E 'tmux new-session -A -s scratch'
 
 ##### Notifications #####
-# Prefix + N sends a desktop notification
 bind N run-shell 'command -v notify-send >/dev/null 2>&1 && notify-send "tmux" "Done" || true'
 
 ##### Docker control #####
-# Prefix + d opens lazydocker if installed
 bind d display-popup -E 'command -v lazydocker >/dev/null 2>&1 && lazydocker || (echo "lazydocker not installed"; read -r)'
 
 ##### Kill port #####
-# Prefix + k then type a port number (e.g. 3000)
 bind k command-prompt -p "Kill port:" "run-shell 'p=\"%%\"; fuser -k ${p}/tcp 2>/dev/null && tmux display-message \"killed port ${p}\" || tmux display-message \"nothing on ${p}\"'"
 
 ##### Focus mode #####
@@ -259,17 +263,14 @@ set -g status-right "#[fg=yellow]#(git -C #{pane_current_path} rev-parse --abbre
 set -g @plugin 'tmux-plugins/tpm'
 set -g @plugin 'tmux-plugins/tmux-sensible'
 
-# Persist sessions
 set -g @plugin 'tmux-plugins/tmux-resurrect'
 set -g @plugin 'tmux-plugins/tmux-continuum'
 set -g @continuum-restore 'on'
 set -g @resurrect-capture-pane-contents 'on'
 
-# Status utils
 set -g @plugin 'tmux-plugins/tmux-cpu'
 set -g @plugin 'tmux-plugins/tmux-battery'
 
-# nvim <-> tmux navigation consistency
 set -g @plugin 'christoomey/vim-tmux-navigator'
 
 run '~/.tmux/plugins/tpm/tpm'
@@ -280,13 +281,17 @@ EOF
   log "  - ~/.local/bin/tmux-sessionizer"
   log "  - ~/.tmux/plugins/tpm"
 
-  # If already inside tmux, reload + try install plugins automatically
+  # Reload if in tmux
   if [[ -n "${TMUX:-}" ]]; then
     tmux source-file "$HOME/.tmux.conf" || true
-    tmux run-shell "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
-  else
-    warn "Open tmux and press Ctrl+a then I to install plugins (TPM)."
   fi
+
+  # Try install plugins (works even outside tmux in many cases)
+  if [[ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]]; then
+    "$HOME/.tmux/plugins/tpm/bin/install_plugins" >/dev/null 2>&1 || true
+  fi
+
+  warn "If plugins didn't install automatically: open tmux and press Ctrl+a then I (TPM)."
 }
 
 ensure_xampp_compat() {
@@ -566,7 +571,7 @@ install_zsh() {
   log "Installing ZSH and Oh My Zsh + plugins (awesomepanda)"
 
   # deps útiles para tu zshrc
-  pac_install zsh curl git tmux lsd
+  pac_install zsh curl git tmux lsd zoxide atuin
 
   if need_cmd yay; then
     yay -S --needed --noconfirm tty-clock
@@ -608,6 +613,8 @@ install_zsh() {
   cat > "$HOME/.zshrc" <<'EOF'
 # =========================================================
 # Zsh PRO config (Oh-My-Zsh + tmux workflow)
+# - FZF PRO (Ctrl+T / Alt+C + previews)
+# - Ctrl+R reservado SOLO para Atuin (sin conflicto con FZF)
 # =========================================================
 
 # If you come from bash you might have to change your $PATH.
@@ -642,14 +649,50 @@ plugins=(
 source "$ZSH/oh-my-zsh.sh"
 
 # -------------------------
-# FZF (Ctrl+R history, completion)
+# FZF (completion + keybinds)
+# - cargamos key-bindings pero quitamos Ctrl+R para que lo use Atuin
 # -------------------------
-if [[ -f /usr/share/fzf/key-bindings.zsh ]]; then
-  source /usr/share/fzf/key-bindings.zsh
-fi
 if [[ -f /usr/share/fzf/completion.zsh ]]; then
   source /usr/share/fzf/completion.zsh
 fi
+
+if [[ -f /usr/share/fzf/key-bindings.zsh ]]; then
+  source /usr/share/fzf/key-bindings.zsh
+  # Desactiva Ctrl+R de fzf (Atuin se queda con Ctrl+R)
+  bindkey -r '^R' 2>/dev/null || true
+fi
+
+# -------------------------
+# FZF PRO (previews + ctrl-t/alt-c)
+# -------------------------
+export FZF_DEFAULT_OPTS="
+--height=60%
+--layout=reverse
+--border
+--info=inline
+--prompt='❯ '
+"
+
+# Use fd when available (fast + respects ignore)
+if command -v fd >/dev/null 2>&1; then
+  export FZF_CTRL_T_COMMAND="fd --type f --hidden --follow --exclude .git"
+  export FZF_ALT_C_COMMAND="fd --type d --hidden --follow --exclude .git"
+else
+  export FZF_CTRL_T_COMMAND="find . -type f 2>/dev/null"
+  export FZF_ALT_C_COMMAND="find . -type d 2>/dev/null"
+fi
+
+# Previews (bat if available; fallback to sed/head)
+if command -v bat >/dev/null 2>&1; then
+  export FZF_CTRL_T_OPTS="--preview 'bat --style=numbers --color=always --line-range :400 {} 2>/dev/null' --preview-window=right:60%"
+  export FZF_ALT_C_OPTS="--preview 'ls -la {} 2>/dev/null | head -200' --preview-window=right:60%"
+else
+  export FZF_CTRL_T_OPTS="--preview 'sed -n \"1,200p\" {} 2>/dev/null' --preview-window=right:60%"
+  export FZF_ALT_C_OPTS="--preview 'ls -la {} 2>/dev/null | head -200' --preview-window=right:60%"
+fi
+
+# Default search command (nice for fzf widgets / tools)
+export FZF_DEFAULT_COMMAND="rg --files --hidden --follow --glob '!.git/*' 2>/dev/null || find . -type f 2>/dev/null"
 
 # -------------------------
 # History (pro)
@@ -695,7 +738,7 @@ function y() {
 }
 
 # -------------------------
-# Aliases
+# Aliases + integrations
 # -------------------------
 
 # Terminal / tools
@@ -711,7 +754,17 @@ alias ipinfo='curl -s ipinfo.io'
 alias ls='lsd'
 alias lsa='lsd -la'
 
-# cd
+# Ctrl+R = ATUIN (no conflict with fzf)
+if command -v atuin >/dev/null 2>&1; then
+  eval "$(atuin init zsh)"
+fi
+
+# zoxide (smart cd)
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+  alias cd='z'
+fi
+
 alias cd..='cd ..'
 
 # tmux
@@ -746,7 +799,7 @@ alias xampp-restart='sudo /opt/lampp/lampp restart'
 
 # -------------------------
 # Auto-start tmux (optional)
-# Set to 1 to enable
+# Set AUTO_TMUX=1 to enable
 # -------------------------
 AUTO_TMUX="${AUTO_TMUX:-0}"
 
@@ -759,6 +812,7 @@ fi
 # -------------------------
 # End
 # -------------------------
+#
 EOF
 }
 
