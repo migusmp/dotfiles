@@ -17,8 +17,8 @@ install_tmux_ultra() {
 
   # --- packages (base) ---
   sudo pacman -S --needed --noconfirm \
-    tmux git fzf fd ripgrep bat wl-clipboard fuser \
-    awk sed coreutils findutils
+    tmux git fzf fd ripgrep bat wl-clipboard psmisc \
+    gawk sed coreutils findutils
 
   # notify-send
   sudo pacman -S --needed --noconfirm libnotify || true
