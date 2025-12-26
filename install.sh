@@ -12,6 +12,71 @@ REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "
 
 CONFIG_DIR="$HOME/.config"
 
+install_cloudflare_warp() {
+  log "Installing Cloudflare WARP (1.1.1.1) + ensuring daemon/registration"
+
+  # --- 1) Asegurar AUR helper ---
+  if command -v yay >/dev/null 2>&1; then
+    AUR_HELPER="yay"
+  elif command -v paru >/dev/null 2>&1; then
+    AUR_HELPER="paru"
+  else
+    die "Need an AUR helper (yay or paru) to install cloudflare-warp-bin."
+  fi
+
+  # --- 2) Instalar warp-cli si no existe ---
+  if ! command -v warp-cli >/dev/null 2>&1; then
+    "$AUR_HELPER" -S --needed --noconfirm cloudflare-warp-bin
+  else
+    log "warp-cli already installed"
+  fi
+
+  # --- 3) Asegurar daemon activo ---
+  sudo systemctl daemon-reload || true
+
+  if systemctl list-unit-files | grep -q '^warp-svc\.service'; then
+    sudo systemctl enable --now warp-svc.service
+  else
+    die "warp-svc.service not found after install. Check package installation."
+  fi
+
+  # Espera a que el daemon cree el socket y warp-cli pueda hablar con él
+  for _ in {1..50}; do
+    if warp-cli status >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.2
+  done
+
+  # --- 4) Registro idempotente + ToS no interactivo ---
+  WARP="warp-cli --accept-tos"
+
+  if $WARP registration show >/dev/null 2>&1; then
+    log "WARP registration already OK"
+  else
+    log "Registering WARP client (non-interactive)"
+    $WARP registration new
+  fi
+
+  # --- 5) Modo y conexión ---
+  # Opciones: warp | doh | warp+doh
+  $WARP mode warp
+  log "WARP installed & registered. You can connect later with: warp-cli connect"
+
+  # --- 6) Verificación real ---
+  if command -v curl >/dev/null 2>&1; then
+    if curl -fsSL https://www.cloudflare.com/cdn-cgi/trace/ | grep -q 'warp=on'; then
+      log "Cloudflare WARP connected ✅ (warp=on)"
+    else
+      warn "WARP connected but not verified as warp=on yet. Run: warp-cli status"
+      $WARP status || true
+    fi
+  else
+    warn "curl not installed; skipping 'warp=on' verification"
+    $WARP status || true
+  fi
+}
+
 install_vscode_config() {
   log "Installing VS Code configuration"
 
@@ -460,6 +525,7 @@ fi
   aur_install \
     brave-bin \
     postman-bin \
+    cloudflare-warp-bin \
     bat \
     fzf-tab
 
@@ -468,6 +534,8 @@ fi
 
   log "Seting up vscode..."
   install_vscode_config
+
+  install_cloudflare_warp
 
   log "Done."
   warn "IMPORTANT: logout/login to apply docker group changes (or reboot)."
