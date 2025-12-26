@@ -324,6 +324,7 @@ main() {
     wofi \
     kitty \
     cmatrix \
+    swaync \
     cava \
     thunar \
     wl-clipboard \
