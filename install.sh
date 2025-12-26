@@ -394,6 +394,7 @@ main() {
     thunar \
     wl-clipboard \
     swww \
+    swappy \
     grim slurp \
     brightnessctl \
     networkmanager network-manager-applet \
