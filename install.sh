@@ -12,17 +12,36 @@ REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "
 
 CONFIG_DIR="$HOME/.config"
 
-install_tmux_pro() {
-  log "Installing tmux pro setup (TPM + sessionizer + config)"
+install_tmux_ultra() {
+  log "Installing tmux ULTRA setup (TPM + sessionizer + layouts + plugins + binds)"
 
-  # 1) Packages
+  # --- packages (base) ---
   sudo pacman -S --needed --noconfirm \
-    tmux git fzf fd ripgrep bat wl-clipboard
+    tmux git fzf fd ripgrep bat wl-clipboard fuser \
+    awk sed coreutils findutils
 
-  # 2) Projects root
+  # notify-send
+  sudo pacman -S --needed --noconfirm libnotify || true
+
+  # lazydocker (try pacman first; if not available, try AUR helper)
+  if ! command -v lazydocker >/dev/null 2>&1; then
+    if sudo pacman -S --needed --noconfirm lazydocker >/dev/null 2>&1; then
+      :
+    else
+      if command -v yay >/dev/null 2>&1; then
+        yay -S --needed --noconfirm lazydocker
+      elif command -v paru >/dev/null 2>&1; then
+        paru -S --needed --noconfirm lazydocker
+      else
+        warn "lazydocker not installed (no pacman pkg / no AUR helper). You can install it later."
+      fi
+    fi
+  fi
+
+  # --- projects root ---
   mkdir -p "$HOME/workspace/projects"
 
-  # 3) Sessionizer script
+  # --- sessionizer with layouts ---
   mkdir -p "$HOME/.local/bin"
   cat > "$HOME/.local/bin/tmux-sessionizer" <<'EOF'
 #!/usr/bin/env bash
@@ -31,34 +50,87 @@ set -euo pipefail
 ROOT="$HOME/workspace/projects"
 [[ -d "$ROOT" ]] || ROOT="$HOME"
 
-if ! command -v fzf >/dev/null 2>&1; then
+need() { command -v "$1" >/dev/null 2>&1; }
+
+if ! need fzf; then
   echo "tmux-sessionizer: fzf not installed" >&2
   exit 1
 fi
 
 list_dirs() {
-  if command -v fd >/dev/null 2>&1; then
+  if need fd; then
     fd -t d -d 3 . "$ROOT" 2>/dev/null
   else
     find "$ROOT" -maxdepth 3 -type d 2>/dev/null
   fi
 }
 
+# 1) pick project dir
 dir="$(list_dirs | fzf --prompt="Projects > " --height=60% --reverse || true)"
 [[ -z "${dir:-}" ]] && exit 0
 
 name="$(basename "$dir" | tr '. ' '__')"
 
+# 2) pick layout
+layout="$(
+  printf "%s\n" "default" "rust" "node" "laravel" \
+  | fzf --prompt="Layout > " --height=40% --reverse --no-multi || true
+)"
+[[ -z "${layout:-}" ]] && layout="default"
+
+# 3) create or switch session
 if tmux has-session -t "$name" 2>/dev/null; then
   tmux switch-client -t "$name"
-else
-  tmux new-session -d -s "$name" -c "$dir"
-  tmux switch-client -t "$name"
+  exit 0
 fi
+
+tmux new-session -d -s "$name" -c "$dir"
+
+case "$layout" in
+  rust)
+    tmux rename-window -t "$name:1" "nvim"
+    tmux send-keys -t "$name:1" "nvim ." C-m
+
+    tmux new-window -t "$name" -n "run" -c "$dir"
+    tmux send-keys -t "$name:2" "cargo run" C-m
+
+    tmux new-window -t "$name" -n "test" -c "$dir"
+    tmux send-keys -t "$name:3" "cargo test" C-m
+    ;;
+  node)
+    tmux rename-window -t "$name:1" "nvim"
+    tmux send-keys -t "$name:1" "nvim ." C-m
+
+    tmux new-window -t "$name" -n "dev" -c "$dir"
+    tmux send-keys -t "$name:2" "pnpm dev || npm run dev || yarn dev" C-m
+
+    tmux new-window -t "$name" -n "test" -c "$dir"
+    tmux send-keys -t "$name:3" "pnpm test || npm test || yarn test" C-m
+    ;;
+  laravel)
+    tmux rename-window -t "$name:1" "nvim"
+    tmux send-keys -t "$name:1" "nvim ." C-m
+
+    tmux new-window -t "$name" -n "serve" -c "$dir"
+    tmux send-keys -t "$name:2" "php artisan serve" C-m
+
+    tmux new-window -t "$name" -n "queue" -c "$dir"
+    tmux send-keys -t "$name:3" "php artisan queue:work" C-m
+    ;;
+  default|*)
+    tmux rename-window -t "$name:1" "nvim"
+    tmux send-keys -t "$name:1" "nvim ." C-m
+
+    tmux new-window -t "$name" -n "shell" -c "$dir"
+    ;;
+esac
+
+tmux select-window -t "$name:1"
+tmux switch-client -t "$name"
 EOF
   chmod +x "$HOME/.local/bin/tmux-sessionizer"
 
-  # 4) TPM
+  # --- TPM ---
   mkdir -p "$HOME/.tmux/plugins"
   if [[ ! -d "$HOME/.tmux/plugins/tpm" ]]; then
     git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
@@ -66,7 +138,7 @@ EOF
     (cd "$HOME/.tmux/plugins/tpm" && git pull --ff-only) || true
   fi
 
-  # 5) tmux.conf (your working config)
+  # --- tmux.conf ULTRA (includes everything) ---
   cat > "$HOME/.tmux.conf" <<'EOF'
 ##### General #####
 set -g mouse on
@@ -114,8 +186,6 @@ setw -g mode-keys vi
 bind -T copy-mode-vi v send -X begin-selection
 bind -T copy-mode-vi y send -X copy-pipe-and-cancel "wl-copy"
 bind -T copy-mode-vi Escape send -X cancel
-
-# Quick copy-mode
 bind [ copy-mode
 
 ##### Quality: keep cwd when creating windows/panes #####
@@ -132,45 +202,87 @@ bind -n M-7 select-window -t 7
 bind -n M-8 select-window -t 8
 bind -n M-9 select-window -t 9
 
-##### Sessionizer (fzf) #####
-# Prefix + f opens project picker and attaches/creates session
-# Use popup if supported; fallback to split if not.
+##### Sessionizer (fzf + layouts) #####
+# Prefix + f opens project picker and layout picker
+# Popup if tmux >= 3.2, else split fallback.
 if-shell -b 'tmux -V | awk "{print \\$2}" | awk -F. "{exit !(\\$1>3 || (\\$1==3 && \\$2>=2))}"' \
   'bind f display-popup -E "$HOME/.local/bin/tmux-sessionizer"' \
   'bind f split-window -v -c "#{pane_current_path}" "$HOME/.local/bin/tmux-sessionizer"'
+
+##### Fuzzy switch windows/panes #####
+# Prefix + w: fuzzy select window
+bind w display-popup -E 'tmux list-windows -F "#{window_index}: #{window_name}  (#{window_panes} panes)" | fzf | cut -d: -f1 | xargs -r tmux select-window -t'
+# Prefix + p: fuzzy select pane across session
+bind p display-popup -E 'tmux list-panes -s -F "#{session_name}:#{window_index}.#{pane_index}  #{pane_current_path}" | fzf | awk "{print \\$1}" | xargs -r tmux select-pane -t'
+
+##### Search across panes (last ~5000 lines each) #####
+# Prefix + / then type query
+bind / command-prompt -p "Search panes:" \
+  "run-shell 'q=\"%%\"; tmux list-panes -a -F \"#D\" | while read -r id; do tmux capture-pane -pt \"${id}\" -S -5000 | rg -n --color=never \"$q\" && echo \"---\"; done | less -R'"
+
+##### Sync panes (multi-cursor) #####
+# Prefix + s toggles synchronize-panes
+bind s setw synchronize-panes \; display-message "sync panes: #{?pane_synchronized,ON,OFF}"
+
+##### Scratch popup #####
+# Prefix + x opens scratch session
+bind x display-popup -E 'tmux new-session -A -s scratch'
+
+##### Notifications #####
+# Prefix + N sends a desktop notification
+bind N run-shell 'command -v notify-send >/dev/null 2>&1 && notify-send "tmux" "Done" || true'
+
+##### Docker control #####
+# Prefix + d opens lazydocker if installed
+bind d display-popup -E 'command -v lazydocker >/dev/null 2>&1 && lazydocker || (echo "lazydocker not installed"; read -r)'
+
+##### Kill port #####
+# Prefix + k then type a port number (e.g. 3000)
+bind k command-prompt -p "Kill port:" "run-shell 'p=\"%%\"; fuser -k ${p}/tcp 2>/dev/null && tmux display-message \"killed port ${p}\" || tmux display-message \"nothing on ${p}\"'"
+
+##### Focus mode #####
+bind F set -g status off \; display-message "FOCUS MODE"
+bind B set -g status on  \; display-message "NORMAL MODE"
 
 ##### Status bar (clean + useful) #####
 set -g status on
 set -g status-interval 3
 set -g status-style bg=default,fg=white
 
-set -g status-left-length 60
+set -g status-left-length 80
 set -g status-left "#[fg=cyan] #S #[fg=white]| #[fg=magenta]#(whoami) "
 
-set -g status-right-length 140
-set -g status-right "#[fg=yellow]#(git -C #{pane_current_path} rev-parse --abbrev-ref HEAD 2>/dev/null) #[fg=white]| #[fg=green]%Y-%m-%d %H:%M "
+set -g status-right-length 180
+set -g status-right "#[fg=yellow]#(git -C #{pane_current_path} rev-parse --abbrev-ref HEAD 2>/dev/null) #[fg=white]| #[fg=green]#(tmux-cpu 2>/dev/null) #[fg=cyan]#(tmux-battery 2>/dev/null) #[fg=white]| #[fg=green]%Y-%m-%d %H:%M "
 
 ##### Plugins (TPM) #####
 set -g @plugin 'tmux-plugins/tpm'
 set -g @plugin 'tmux-plugins/tmux-sensible'
+
+# Persist sessions
 set -g @plugin 'tmux-plugins/tmux-resurrect'
 set -g @plugin 'tmux-plugins/tmux-continuum'
-
-# Resurrect/Continuum config
 set -g @continuum-restore 'on'
 set -g @resurrect-capture-pane-contents 'on'
+
+# Status utils
+set -g @plugin 'tmux-plugins/tmux-cpu'
+set -g @plugin 'tmux-plugins/tmux-battery'
+
+# nvim <-> tmux navigation consistency
+set -g @plugin 'christoomey/vim-tmux-navigator'
 
 run '~/.tmux/plugins/tpm/tpm'
 EOF
 
-  log "tmux config installed: ~/.tmux.conf"
-  log "sessionizer installed: ~/.local/bin/tmux-sessionizer"
-  log "TPM installed: ~/.tmux/plugins/tpm"
+  log "tmux ULTRA installed:"
+  log "  - ~/.tmux.conf"
+  log "  - ~/.local/bin/tmux-sessionizer"
+  log "  - ~/.tmux/plugins/tpm"
 
-  # 6) Optional: if we're already inside tmux, reload + install plugins
+  # If already inside tmux, reload + try install plugins automatically
   if [[ -n "${TMUX:-}" ]]; then
     tmux source-file "$HOME/.tmux.conf" || true
-    # Install plugins: prefix + I is the usual way; this tries to do it automatically
     tmux run-shell "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
   else
     warn "Open tmux and press Ctrl+a then I to install plugins (TPM)."
@@ -814,7 +926,7 @@ fi
 
   install_xampp
   ensure_xampp_compat
-  install_tmux_pro
+  install_tmux_ultra
 
   log "Done."
   warn "IMPORTANT: logout/login to apply docker group changes (or reboot)."
