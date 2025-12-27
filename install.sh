@@ -260,6 +260,11 @@ bind k command-prompt -p "Kill port:" "run-shell 'p=\"%%\"; fuser -k ${p}/tcp 2>
 bind F set -g status off \; display-message "FOCUS MODE"
 bind B set -g status on  \; display-message "NORMAL MODE"
 
+# Prefix + X → kill current session safely
+bind X confirm-before -p "Kill session '#S'? (y/n)" \
+  "switch-client -n \; kill-session -t #S"
+
+
 ##### THEME: Modern Dark + Accent (clean/pill) #####
 
 # Palette
