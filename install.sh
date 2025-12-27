@@ -234,7 +234,11 @@ bind / command-prompt -p "Search panes:" \
 
 ##### Sync panes (multi-cursor) #####
 # Prefix + s toggles synchronize-panes
-bind s setw synchronize-panes \; display-message "sync panes: #{?pane_synchronized,ON,OFF}"
+##### Sessions chooser #####
+bind s choose-tree -Zs
+
+##### Sync panes (multi-cursor) #####
+bind S setw synchronize-panes \; display-message "sync panes: #{?pane_synchronized,ON,OFF}"
 
 ##### Scratch popup #####
 # Prefix + x opens scratch session
@@ -286,14 +290,14 @@ set -g menu-selected-style "bg=#{@thm_accent},fg=#{@thm_bg}"
 set -g status on
 set -g status-interval 3
 set -g status-style "bg=default,fg=#{@thm_muted}"
-set -g status-position top
+set -g status-position bottom
 set -g status-justify left
 
 set -g status-left-length 100
 set -g status-right-length 180
 
 # Left: Arch logo + user
-set -g status-left "#[fg=white]   #[fg=#{@thm_accent},bold]migus #[fg=#{@thm_muted}]│ #[default]"
+set -g status-left "#[fg=white]   #[fg=#{@thm_accent},bold]migus #[fg=#{@thm_muted}]│ #[fg=#{@thm_blue}]#S #[fg=#{@thm_muted}]│ #[default]"
 
 # Windows: pill tabs
 setw -g window-status-separator " "
