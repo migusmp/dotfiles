@@ -195,3 +195,36 @@ map("i", "<C-k>", "<Up>", opts)
 map("i", "<C-j>", "<Down>", opts)
 map("i", "<C-h>", "<Left>", opts)
 map("i", "<C-l>", "<Right>", opts)
+
+-- =========================
+-- GitSigns keymaps (robusto)
+-- =========================
+vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
+    callback = function()
+        local ok, gs = pcall(require, "gitsigns")
+        if not ok then return end
+
+        -- Para no re-mapear 200 veces
+        if vim.g.__gitsigns_keymaps_set then return end
+        vim.g.__gitsigns_keymaps_set = true
+
+        vim.keymap.set("n", "]c", gs.next_hunk, { desc = "Next git hunk", silent = true })
+        vim.keymap.set("n", "[c", gs.prev_hunk, { desc = "Prev git hunk", silent = true })
+
+        vim.keymap.set("n", "<leader>gs", gs.stage_hunk, { desc = "Git stage hunk", silent = true })
+        vim.keymap.set("n", "<leader>gr", gs.reset_hunk, { desc = "Git reset hunk", silent = true })
+        vim.keymap.set("n", "<leader>gp", gs.preview_hunk, { desc = "Git preview hunk", silent = true })
+        vim.keymap.set("n", "<leader>gb", gs.blame_line, { desc = "Git blame line", silent = true })
+
+        vim.keymap.set("n", "<leader>gS", gs.stage_buffer, { desc = "Git stage buffer", silent = true })
+        vim.keymap.set("n", "<leader>gR", gs.reset_buffer, { desc = "Git reset buffer", silent = true })
+    end,
+})
+
+-- =========================
+-- Oil.nvim keymaps
+-- =========================
+map("n", "<leader>e", "<cmd>Oil<CR>", {
+    desc = "Open Oil file explorer",
+    silent = true,
+})
