@@ -181,7 +181,7 @@ map("n", "<leader>ht", harpoon(function() require("harpoon.term").gotoTerminal(1
 -- =========================
 -- Java: Generate getters/setters
 -- =========================
-vim.api.nvim_set_keymap("n", "<leader>ggs", ":GenGetSet<CR>", { noremap = true, silent = true })
+map("n", "<leader>ggs", "<cmd>GenGetSet<CR>", { desc = "Java: Generate getters/setters", silent = true })
 
 -- =========================
 -- (Opcional) "jk" para salir de insert
@@ -199,25 +199,24 @@ map("i", "<C-l>", "<Right>", opts)
 -- =========================
 -- GitSigns keymaps (robusto)
 -- =========================
-vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
-    callback = function()
-        local ok, gs = pcall(require, "gitsigns")
-        if not ok then return end
+vim.api.nvim_create_autocmd("User", {
+    pattern = "GitsignsAttach",
+    callback = function(args)
+        local gs = package.loaded.gitsigns
+        if not gs then return end
 
-        -- Para no re-mapear 200 veces
-        if vim.g.__gitsigns_keymaps_set then return end
-        vim.g.__gitsigns_keymaps_set = true
+        local opts = { buffer = args.buf, silent = true }
 
-        vim.keymap.set("n", "]c", gs.next_hunk, { desc = "Next git hunk", silent = true })
-        vim.keymap.set("n", "[c", gs.prev_hunk, { desc = "Prev git hunk", silent = true })
+        vim.keymap.set("n", "]c", gs.next_hunk, vim.tbl_extend("force", opts, { desc = "Next git hunk" }))
+        vim.keymap.set("n", "[c", gs.prev_hunk, vim.tbl_extend("force", opts, { desc = "Prev git hunk" }))
 
-        vim.keymap.set("n", "<leader>gs", gs.stage_hunk, { desc = "Git stage hunk", silent = true })
-        vim.keymap.set("n", "<leader>gr", gs.reset_hunk, { desc = "Git reset hunk", silent = true })
-        vim.keymap.set("n", "<leader>gp", gs.preview_hunk, { desc = "Git preview hunk", silent = true })
-        vim.keymap.set("n", "<leader>gb", gs.blame_line, { desc = "Git blame line", silent = true })
+        vim.keymap.set("n", "<leader>gs", gs.stage_hunk, vim.tbl_extend("force", opts, { desc = "Git stage hunk" }))
+        vim.keymap.set("n", "<leader>gr", gs.reset_hunk, vim.tbl_extend("force", opts, { desc = "Git reset hunk" }))
+        vim.keymap.set("n", "<leader>gp", gs.preview_hunk, vim.tbl_extend("force", opts, { desc = "Git preview hunk" }))
+        vim.keymap.set("n", "<leader>gb", gs.blame_line, vim.tbl_extend("force", opts, { desc = "Git blame line" }))
 
-        vim.keymap.set("n", "<leader>gS", gs.stage_buffer, { desc = "Git stage buffer", silent = true })
-        vim.keymap.set("n", "<leader>gR", gs.reset_buffer, { desc = "Git reset buffer", silent = true })
+        vim.keymap.set("n", "<leader>gS", gs.stage_buffer, vim.tbl_extend("force", opts, { desc = "Git stage buffer" }))
+        vim.keymap.set("n", "<leader>gR", gs.reset_buffer, vim.tbl_extend("force", opts, { desc = "Git reset buffer" }))
     end,
 })
 

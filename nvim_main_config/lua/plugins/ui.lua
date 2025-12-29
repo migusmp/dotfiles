@@ -68,6 +68,11 @@ return {
     {
         "folke/which-key.nvim",
         event = "VeryLazy",
+        keys = { "<leader>" }, -- 🔥 carga which-key cuando pulsas leader
+        init = function()
+            vim.o.timeout = true
+            vim.o.timeoutlen = 400
+        end,
         config = function()
             local wk = require("which-key")
 
@@ -75,26 +80,26 @@ return {
                 plugins = {
                     spelling = { enabled = true },
                 },
-                window = {
+
+                win = {
                     border = "rounded",
                     position = "bottom",
                 },
+
                 layout = {
                     spacing = 6,
                 },
-                show_help = true,
-                show_keys = true,
             })
 
-            -- Opcional: agrupar tus leader (NO cambia keymaps)
-            wk.register({
-                w = { name = "write / window" },
-                g = { name = "git / goto / lsp" },
-                f = { name = "find / format" },
-                h = { name = "harpoon" },
-                t = { name = "tabs / terminal" },
-                s = { name = "split / substitute" },
-            }, { prefix = "<leader>" })
+            -- ✅ Spec nuevo (en vez de wk.register + prefix)
+            wk.add({
+                { "<leader>w", group = "write / window" },
+                { "<leader>g", group = "git / goto / lsp" },
+                { "<leader>f", group = "find / format" },
+                { "<leader>h", group = "harpoon" },
+                { "<leader>t", group = "tabs / terminal" },
+                { "<leader>s", group = "split / substitute" },
+            })
         end,
     },
     -- gitsigns.nvim
@@ -128,7 +133,6 @@ return {
         dependencies = { "nvim-tree/nvim-web-devicons" },
         config = function()
             require("oil").setup({
-                default_file_explorer = false, -- NO pisa netrw
                 columns = { "icon", "permissions", "size" },
                 view_options = {
                     show_hidden = true,

@@ -25,7 +25,48 @@ local function on_attach(_, bufnr)
         })
     end
 
-    map("n", "gd", vim.lsp.buf.definition, "Go to definition")
+    map("n", "gd", function()
+        -- ✅ encoding del cliente LSP del buffer
+        local clients = vim.lsp.get_clients({ bufnr = bufnr })
+        local enc = (clients[1] and clients[1].offset_encoding) or "utf-16"
+
+        -- ✅ en Neovim nuevo hay que pasarlo aquí
+        local params = vim.lsp.util.make_position_params(0, enc)
+
+        vim.lsp.buf_request(bufnr, "textDocument/definition", params, function(err, result)
+            if err or not result then return end
+
+            local locations = vim.islist(result) and result or { result }
+
+            -- Deduplicar por uri + rango
+            local seen, uniq = {}, {}
+            for _, loc in ipairs(locations) do
+                local uri = loc.uri or loc.targetUri
+                local range = loc.range or loc.targetSelectionRange or loc.targetRange
+                if uri and range then
+                    local key = string.format(
+                        "%s:%d:%d:%d:%d",
+                        uri,
+                        range.start.line, range.start.character,
+                        range["end"].line, range["end"].character
+                    )
+                    if not seen[key] then
+                        seen[key] = true
+                        table.insert(uniq, loc)
+                    end
+                end
+            end
+
+            if #uniq == 0 then return end
+
+            if #uniq == 1 then
+                vim.lsp.util.show_document(uniq[1], enc, { focus = true })
+            else
+                require("telescope.builtin").lsp_definitions()
+            end
+        end)
+    end, "Go to definition (dedup)")
+
     map("n", "gr", vim.lsp.buf.references, "References")
     map("n", "K", vim.lsp.buf.hover, "Hover")
     map("n", "<leader>rn", vim.lsp.buf.rename, "Rename")
