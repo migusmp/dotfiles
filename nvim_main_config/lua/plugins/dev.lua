@@ -83,4 +83,11 @@ return {
 
     -- codeium
     { "Exafunction/codeium.vim", event = "BufEnter" },
+    {
+        "kylechui/nvim-surround",
+        event = "VeryLazy",
+        config = function()
+            require("nvim-surround").setup({})
+        end,
+    },
 }

@@ -951,7 +951,7 @@ main() {
   pac_install \
     nodejs npm pnpm \
     rustup \
-    jdk-openjdk maven gradle \
+    jdk-openjdk maven gradle php composer \
     gcc clang cmake ninja gdb \
     python python-pip
 

@@ -151,6 +151,17 @@ function M.setup()
     })
 
     -- =========================
+    -- PHP (intelephense)
+    -- =========================
+    vim.lsp.config("intelephense", {
+        cmd = { vim.fn.stdpath("data") .. "/mason/bin/intelephense", "--stdio" },
+        capabilities = capabilities,
+        on_attach = on_attach,
+        root_dir = root_pattern("composer.json", ".git"),
+    })
+
+
+    -- =========================
     -- ENABLE ALL
     -- =========================
     vim.lsp.enable({
@@ -158,6 +169,7 @@ function M.setup()
         "rust_analyzer",
         "gopls",
         "zls",
+        "intelephense",
     })
 end
 

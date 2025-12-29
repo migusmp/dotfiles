@@ -79,7 +79,6 @@ return {
                         "rust_analyzer",
                         "gopls",
                         "zls",
-                        "pylsp",
                         "denols",
                         "ts_ls",
                         "intelephense",
