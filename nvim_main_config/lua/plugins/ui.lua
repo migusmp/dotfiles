@@ -20,6 +20,7 @@ return {
             transparent()
         end,
     },
+
     -- Si quieres mantener “tema por lenguaje”, lo hacemos en autocmd y SIN duplicar 200 highlights
     {
         "morhetz/gruvbox",
@@ -84,20 +85,6 @@ return {
                 },
 
                 on_attach = function(_) end,
-            })
-        end,
-    },
-    -- oil.nvim (modern file explorer)
-    {
-        "stevearc/oil.nvim",
-        lazy = false, -- ✅ necesario para que funcione con `nvim .`
-        dependencies = { "nvim-tree/nvim-web-devicons" },
-        config = function()
-            require("oil").setup({
-                default_file_explorer = true, -- ✅ Oil maneja directorios
-                columns = { "icon", "permissions", "size" },
-                view_options = { show_hidden = true },
-                use_default_keymaps = true,
             })
         end,
     },

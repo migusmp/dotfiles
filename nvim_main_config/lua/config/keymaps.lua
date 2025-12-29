@@ -6,11 +6,10 @@ local map = vim.keymap.set
 local opts = { silent = true }
 
 map({ "n", "v" }, "<Space>", "<Nop>", { silent = true })
+vim.keymap.set("n", "<leader>pv", vim.cmd.Ex)
 -- =========================
 -- Basics / Quality of life
 -- =========================
-map("n", "<leader>pv", "<cmd>Oil<CR>", { desc = "Explorer (Oil)", silent = true })
-
 -- Move selected lines
 map("v", "J", ":m '>+1<CR>gv=gv", opts)
 map("v", "K", ":m '<-2<CR>gv=gv", opts)
@@ -219,12 +218,4 @@ vim.api.nvim_create_autocmd("User", {
         vim.keymap.set("n", "<leader>gS", gs.stage_buffer, vim.tbl_extend("force", opts, { desc = "Git stage buffer" }))
         vim.keymap.set("n", "<leader>gR", gs.reset_buffer, vim.tbl_extend("force", opts, { desc = "Git reset buffer" }))
     end,
-})
-
--- =========================
--- Oil.nvim keymaps
--- =========================
-map("n", "<leader>e", "<cmd>Oil<CR>", {
-    desc = "Open Oil file explorer",
-    silent = true,
 })
