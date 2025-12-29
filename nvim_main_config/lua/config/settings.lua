@@ -1,4 +1,7 @@
 -- lua/config/settings.lua
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
@@ -37,3 +40,17 @@ vim.opt.updatetime = 50
 vim.opt.colorcolumn = "100"
 
 vim.g.visual_multi_use_default_keymaps = 1 -- Activa los mapeos por defecto si no están activados
+
+-- =========================
+-- Highlight / Syntax safety
+-- =========================
+vim.cmd("syntax on") -- asegura colores base aunque TS falle
+
+-- Asegura que Treesitter se enganche al detectar el filetype
+vim.api.nvim_create_autocmd("FileType", {
+    callback = function(args)
+        if vim.bo[args.buf].buftype ~= "" then return end
+        if vim.bo[args.buf].filetype == "" then return end
+        pcall(vim.treesitter.start, args.buf)
+    end,
+})

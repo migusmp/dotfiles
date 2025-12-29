@@ -5,10 +5,11 @@ vim.g.maplocalleader = " "
 local map = vim.keymap.set
 local opts = { silent = true }
 
+map({ "n", "v" }, "<Space>", "<Nop>", { silent = true })
 -- =========================
 -- Basics / Quality of life
 -- =========================
-map("n", "<leader>pv", vim.cmd.Ex, { desc = "Explorer", silent = true })
+map("n", "<leader>pv", "<cmd>Oil<CR>", { desc = "Explorer (Oil)", silent = true })
 
 -- Move selected lines
 map("v", "J", ":m '>+1<CR>gv=gv", opts)

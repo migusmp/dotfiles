@@ -20,7 +20,6 @@ return {
             transparent()
         end,
     },
-
     -- Si quieres mantener “tema por lenguaje”, lo hacemos en autocmd y SIN duplicar 200 highlights
     {
         "morhetz/gruvbox",
@@ -64,44 +63,6 @@ return {
             if f then f.setup({}) end
         end,
     },
-    -- which-key.nvim
-    {
-        "folke/which-key.nvim",
-        event = "VeryLazy",
-        keys = { "<leader>" }, -- 🔥 carga which-key cuando pulsas leader
-        init = function()
-            vim.o.timeout = true
-            vim.o.timeoutlen = 400
-        end,
-        config = function()
-            local wk = require("which-key")
-
-            wk.setup({
-                plugins = {
-                    spelling = { enabled = true },
-                },
-
-                win = {
-                    border = "rounded",
-                    position = "bottom",
-                },
-
-                layout = {
-                    spacing = 6,
-                },
-            })
-
-            -- ✅ Spec nuevo (en vez de wk.register + prefix)
-            wk.add({
-                { "<leader>w", group = "write / window" },
-                { "<leader>g", group = "git / goto / lsp" },
-                { "<leader>f", group = "find / format" },
-                { "<leader>h", group = "harpoon" },
-                { "<leader>t", group = "tabs / terminal" },
-                { "<leader>s", group = "split / substitute" },
-            })
-        end,
-    },
     -- gitsigns.nvim
     {
         "lewis6991/gitsigns.nvim",
@@ -129,16 +90,13 @@ return {
     -- oil.nvim (modern file explorer)
     {
         "stevearc/oil.nvim",
-        cmd = "Oil",
+        lazy = false, -- ✅ necesario para que funcione con `nvim .`
         dependencies = { "nvim-tree/nvim-web-devicons" },
         config = function()
             require("oil").setup({
+                default_file_explorer = true, -- ✅ Oil maneja directorios
                 columns = { "icon", "permissions", "size" },
-                view_options = {
-                    show_hidden = true,
-                },
-
-                -- Usar keymaps DEFAULT de oil (no añadimos nada)
+                view_options = { show_hidden = true },
                 use_default_keymaps = true,
             })
         end,
