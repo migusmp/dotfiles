@@ -88,4 +88,49 @@ return {
             })
         end,
     },
+
+    {
+        "goolord/alpha-nvim",
+        event = "VimEnter",
+        dependencies = { "nvim-tree/nvim-web-devicons" },
+        config = function()
+            local alpha = require("alpha")
+            local dashboard = require("alpha.themes.dashboard")
+
+            -- Header (tu nombre)
+            dashboard.section.header.val = {
+                "███╗   ███╗██╗ ██████╗ ██╗   ██╗███████╗",
+                "████╗ ████║██║██╔════╝ ██║   ██║██╔════╝",
+                "██╔████╔██║██║██║  ███╗██║   ██║███████╗",
+                "██║╚██╔╝██║██║██║   ██║██║   ██║╚════██║",
+                "██║ ╚═╝ ██║██║╚██████╔╝╚██████╔╝███████║",
+                "╚═╝     ╚═╝╚═╝ ╚═════╝  ╚═════╝ ╚══════╝",
+                "",
+                "           ──  MIGUS  ──",
+                "",
+            }
+
+            -- Botones (menu)
+            dashboard.section.buttons.val = {
+                dashboard.button("f", "  Find file", "<cmd>Telescope find_files<CR>"),
+                dashboard.button("g", "  Live grep", "<cmd>Telescope live_grep<CR>"),
+                dashboard.button("r", "  Recent files", "<cmd>Telescope oldfiles<CR>"),
+                dashboard.button("n", "  New file", "<cmd>enew<CR>"),
+                dashboard.button("c", "  Config (nvim)", "<cmd>e $MYVIMRC<CR>"),
+                dashboard.button("l", "󰒲  Lazy", "<cmd>Lazy<CR>"),
+                dashboard.button("q", "  Quit", "<cmd>qa<CR>"),
+            }
+
+            -- Footer (opcional)
+            dashboard.section.footer.val = "Neovim ready."
+
+            dashboard.opts.opts.noautocmd = true
+
+            -- Que SOLO salga si abres nvim “vacío”
+            local argv = vim.fn.argv()
+            if #argv == 0 and vim.fn.expand("%") == "" then
+                alpha.setup(dashboard.opts)
+            end
+        end,
+    },
 }

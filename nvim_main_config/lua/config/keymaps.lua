@@ -170,6 +170,24 @@ map("n", "<leader>hp", harpoon(function() require("harpoon.ui").nav_prev() end),
 map("n", "<leader>ht", harpoon(function() require("harpoon.term").gotoTerminal(1) end),
     { desc = "Harpoon terminal", silent = true })
 
+map("n", "<leader>h1",
+    harpoon(function() require("harpoon.term").gotoTerminal(1) end),
+    { desc = "Harpoon term 1", silent = true }
+)
+
+map("n", "<leader>h2",
+    harpoon(function() require("harpoon.term").gotoTerminal(2) end),
+    { desc = "Harpoon term 2", silent = true }
+)
+
+map("n", "<leader>h3",
+    harpoon(function() require("harpoon.term").gotoTerminal(3) end),
+    { desc = "Harpoon term 3", silent = true }
+)
+
+
+map("t", "<Esc>", [[<C-\><C-n>]], { silent = true })
+
 -- -- =========================
 -- -- Primeagen Go error snippets (los dejo como los tenías)
 -- -- =========================
