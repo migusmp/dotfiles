@@ -73,6 +73,49 @@ local function normalize_c_highlights()
         bold = false,
         italic = false,
     })
+
+    -- =========================
+    -- Structs en amarillo Gruvbox
+    -- =========================
+
+    -- Syntax clásico
+    vim.api.nvim_set_hl(0, "Structure", {
+        fg = "#fabd2f",
+        bold = false,
+        italic = false,
+    })
+
+    -- Tipo general (struct Foo)
+    vim.api.nvim_set_hl(0, "Type", {
+        fg = "#fabd2f",
+        bold = false,
+        italic = false,
+    })
+
+    -- Tree-sitter (clave)
+    vim.api.nvim_set_hl(0, "@type", {
+        fg = "#fabd2f",
+        bold = false,
+        italic = false,
+    })
+
+    vim.api.nvim_set_hl(0, "@type.definition", {
+        fg = "#fabd2f",
+        bold = false,
+        italic = false,
+    })
+
+    vim.api.nvim_set_hl(0, "@type.builtin", {
+        fg = "#fabd2f",
+        bold = false,
+        italic = false,
+    })
+
+    vim.api.nvim_set_hl(0, "@structure", {
+        fg = "#fabd2f",
+        bold = false,
+        italic = false,
+    })
 end
 
 local function set_pretty_selection_for_gruvbox()
@@ -137,7 +180,6 @@ local function apply()
         if current ~= "rose-pine" then
             current = "rose-pine"
             load_and_set("rose-pine-moon", "rose-pine")
-            set_transparent()
         end
     end
 end

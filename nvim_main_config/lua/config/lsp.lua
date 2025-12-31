@@ -25,6 +25,7 @@ local function on_attach(_, bufnr)
         })
     end
 
+
     map("n", "gd", function()
         -- ✅ encoding del cliente LSP del buffer
         local clients = vim.lsp.get_clients({ bufnr = bufnr })
@@ -67,11 +68,21 @@ local function on_attach(_, bufnr)
         end)
     end, "Go to definition (dedup)")
 
-    map("n", "gr", vim.lsp.buf.references, "References")
-    map("n", "K", vim.lsp.buf.hover, "Hover")
-    map("n", "<leader>rn", vim.lsp.buf.rename, "Rename")
-    map("n", "<leader>ca", vim.lsp.buf.code_action, "Code action")
+    map("n", "<leader>gg", vim.lsp.buf.hover, "Hover (info símbolo)")
+    map("n", "<leader>gi", vim.lsp.buf.implementation, "Ir a implementación")
+    map("n", "<leader>gt", vim.lsp.buf.type_definition, "Type definition")
+    map("n", "<leader>gr", vim.lsp.buf.references, "References")
+    map("n", "<leader>gs", vim.lsp.buf.signature_help, "Signature help")
+    map("n", "<leader>rr", vim.lsp.buf.rename, "Rename")
+    map("n", "<leader>ga", vim.lsp.buf.code_action, "Code action")
+    map("n", "<leader>gl", vim.diagnostic.open_float, "Diagnostic float")
+    map("n", "<leader>gp", vim.diagnostic.goto_prev, "Prev diagnostic")
+    map("n", "<leader>gn", vim.diagnostic.goto_next, "Next diagnostic")
+    map("n", "<leader>tr", vim.lsp.buf.document_symbol, "Document symbols")
+    map("i", "<c-space>", vim.lsp.buf.completion, "Completion")
 end
+
+M._on_attach = on_attach
 
 -- =========================
 -- LSP setup
@@ -160,6 +171,28 @@ function M.setup()
         root_dir = root_pattern("composer.json", ".git"),
     })
 
+    -- =========================
+    -- ASM (asm-lsp) - NASM/GAS
+    -- =========================
+    vim.lsp.config("asm_lsp", {
+        cmd = { vim.fn.stdpath("data") .. "/mason/bin/asm-lsp" },
+        capabilities = capabilities,
+        on_attach = function(client, bufnr)
+            -- Apaga diagnostics SOLO para asm_lsp (sin afectar a otros LSP)
+            client.handlers["textDocument/publishDiagnostics"] = function() end
+
+            on_attach(client, bufnr)
+        end,
+        root_dir = function(bufnr)
+            local root = root_pattern(".asm-lsp.toml", ".git")(bufnr)
+            if root then return root end
+            local fname = vim.api.nvim_buf_get_name(bufnr)
+            if fname == "" then return vim.loop.cwd() end
+            return vim.fs.dirname(fname)
+        end,
+        single_file_support = true,
+        filetypes = { "asm" },
+    })
 
     -- =========================
     -- ENABLE ALL
@@ -170,7 +203,37 @@ function M.setup()
         "gopls",
         "zls",
         "intelephense",
+        -- "asm_lsp",
     })
 end
+
+-- =========================
+-- Force start asm_lsp on asm buffers (because vim.lsp.enable may not autostart it)
+-- =========================
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = { "asm" },
+    callback = function(args)
+        -- si ya hay un asm_lsp en el buffer, no hagas nada
+        if #vim.lsp.get_clients({ bufnr = args.buf, name = "asm_lsp" }) > 0 then
+            return
+        end
+
+        local fname = vim.api.nvim_buf_get_name(args.buf)
+        local dir = vim.fs.dirname(fname)
+
+        vim.lsp.start({
+            name = "asm_lsp",
+            cmd = { vim.fn.stdpath("data") .. "/mason/bin/asm-lsp" },
+            root_dir = vim.fs.root(dir, { ".asm-lsp.toml", ".git" }) or dir,
+            capabilities = vim.g.__my_capabilities or capabilities,
+            on_attach = function(client, bufnr)
+                -- apagar diagnostics falsos sí o sí
+                client.handlers["textDocument/publishDiagnostics"] = function() end
+                on_attach(client, bufnr)
+            end,
+        })
+    end,
+})
+
 
 return M

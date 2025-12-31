@@ -237,3 +237,39 @@ vim.api.nvim_create_autocmd("User", {
         vim.keymap.set("n", "<leader>gR", gs.reset_buffer, vim.tbl_extend("force", opts, { desc = "Git reset buffer" }))
     end,
 })
+
+
+local function with_dap(fn)
+    return function()
+        local ok, dap = pcall(require, "dap")
+        if not ok then
+            vim.notify("DAP no está cargado. Haz :Lazy sync / reinicia Neovim.", vim.log.levels.WARN)
+            return
+        end
+        fn(dap)
+    end
+end
+
+local function with_dapui(fn)
+    return function()
+        local ok, dapui = pcall(require, "dapui")
+        if not ok then
+            vim.notify("DAP UI no está cargado. Haz :Lazy sync / reinicia Neovim.", vim.log.levels.WARN)
+            return
+        end
+        fn(dapui)
+    end
+end
+
+map("n", "<F5>", with_dap(function(dap) dap.continue() end), { desc = "DAP Continue", silent = true })
+map("n", "<F10>", with_dap(function(dap) dap.step_over() end), { desc = "DAP Step Over", silent = true })
+map("n", "<F11>", with_dap(function(dap) dap.step_into() end), { desc = "DAP Step Into", silent = true })
+map("n", "<F12>", with_dap(function(dap) dap.step_out() end), { desc = "DAP Step Out", silent = true })
+
+map("n", "<leader>b", with_dap(function(dap) dap.toggle_breakpoint() end), { desc = "DAP Toggle BP", silent = true })
+map("n", "<leader>B", with_dap(function(dap)
+    dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
+end), { desc = "DAP Conditional BP", silent = true })
+
+map("n", "<leader>du", with_dapui(function(dapui) dapui.toggle() end), { desc = "DAP UI Toggle", silent = true })
+map("n", "<leader>dr", with_dap(function(dap) dap.repl.open() end), { desc = "DAP REPL", silent = true })
