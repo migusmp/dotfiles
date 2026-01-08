@@ -1,6 +1,15 @@
 -- lua/config/lsp.lua
 local M = {}
 
+local function clangd_cmd()
+    local mason_clangd = vim.fn.stdpath("data") .. "/mason/bin/clangd"
+    if vim.fn.executable(mason_clangd) == 1 then
+        return { mason_clangd }
+    end
+    return { "clangd" }
+end
+
+
 -- =========================
 -- Helpers
 -- =========================
@@ -195,6 +204,19 @@ function M.setup()
     })
 
     -- =========================
+    -- C / C++ (clangd) - config
+    -- =========================
+
+    vim.lsp.config("clangd", {
+        capabilities = vim.g.__my_capabilities,
+        on_attach = M._on_attach,
+        cmd = clangd_cmd(),
+        root_dir = root_pattern(".git", "compile_commands.json", "Makefile", "CMakeLists.txt"),
+        single_file_support = true,
+        filetypes = { "c", "cpp", "objc", "objcpp" },
+    })
+
+    -- =========================
     -- ENABLE ALL
     -- =========================
     vim.lsp.enable({
@@ -203,6 +225,7 @@ function M.setup()
         "gopls",
         "zls",
         "intelephense",
+        "clangd",
         -- "asm_lsp",
     })
 end
@@ -235,5 +258,28 @@ vim.api.nvim_create_autocmd("FileType", {
     end,
 })
 
+-- =========================
+-- clangd autostart (FileType)
+-- =========================
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = { "c", "cpp", "objc", "objcpp" },
+    callback = function(args)
+        if #vim.lsp.get_clients({ bufnr = args.buf, name = "clangd" }) > 0 then
+            return
+        end
+
+        local fname = vim.api.nvim_buf_get_name(args.buf)
+        local dir = vim.fs.dirname(fname)
+        local root = vim.fs.root(dir, { ".git", "compile_commands.json", "Makefile", "CMakeLists.txt" }) or dir
+
+        vim.lsp.start({
+            name = "clangd",
+            cmd = clangd_cmd(),
+            root_dir = root,
+            capabilities = vim.g.__my_capabilities,
+            on_attach = M._on_attach,
+        })
+    end,
+})
 
 return M

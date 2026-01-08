@@ -31,6 +31,14 @@ return {
         end,
     },
     {
+        "nikolvs/vim-sunbather",
+        lazy = true,     -- para que cargue al inicio
+        priority = 1000, -- importante para themes
+        config = function()
+            vim.cmd.colorscheme("sunbather")
+        end,
+    },
+    {
         "olimorris/onedarkpro.nvim",
         lazy = true,
     },
